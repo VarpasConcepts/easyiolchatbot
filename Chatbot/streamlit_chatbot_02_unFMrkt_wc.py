@@ -135,12 +135,26 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         response += "\n\nPlease remember, these suggestions are tailored to your unique needs. If you have any specific questions about these lenses, don't hesitate to ask!"
         return response
 
+    # Check if this is a comparison query
+    comparison_keywords = ["compare", "comparison", "difference", "versus", "vs"]
+    is_comparison = any(keyword in query.lower() for keyword in comparison_keywords)
+    
+    if is_comparison:
+        # Identify which lenses are being compared
+        lenses_to_compare = []
+        for lens in ["monofocal", "multifocal", "toric", "light adjustable"]:
+            if lens in query.lower():
+                lenses_to_compare.append(lens.capitalize())
+        
+        if len(lenses_to_compare) < 2:
+            return "I'm sorry, but I couldn't identify which specific lens types you want to compare. Could you please clarify which lens types you'd like me to compare?"
+
     # Existing logic for other queries
     if is_marketing_appropriate(query):
         langchain_answer, _ = query_knowledge_base(query, vectorstore)
         if langchain_answer:
             refined_response = refine_langchain_response(langchain_answer, query, prioritized_lenses)
-            return merge_responses(refined_response, query, user_lifestyle, prioritized_lenses, vectorstore)
+            return merge_responses(refined_response, query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison, lenses_to_compare if is_comparison else None)
     
     # If not marketing appropriate or LangChain doesn't provide an answer, use ChatGPT
     return chat_with_gpt(st.session_state.messages)
@@ -172,9 +186,13 @@ def get_product_example(lens_type, vectorstore):
     result, _ = query_knowledge_base(query, vectorstore)
     return result if result else ""
 
-def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_lenses, vectorstore):
-    lens_types = ['monofocal', 'multifocal', 'toric']
-    mentioned_lenses = [lt for lt in lens_types if lt in langchain_refined.lower()]
+def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison=False, lenses_to_compare=None):
+    if is_comparison and lenses_to_compare:
+        lens_types = lenses_to_compare
+    else:
+        lens_types = ['Monofocal', 'Multifocal', 'Toric', 'Light Adjustable']
+    
+    mentioned_lenses = [lt for lt in lens_types if lt.lower() in langchain_refined.lower()]
     
     product_examples = "; ".join([f"{lens}: {get_product_example(lens, vectorstore)}" for lens in mentioned_lenses])
     
@@ -184,20 +202,20 @@ def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_l
     Query: {user_query}
     Refined answer: {langchain_refined}
     User lifestyle: {user_lifestyle}
-    Prioritized lenses: {', '.join(prioritized_lenses)}
+    {'Lenses to compare' if is_comparison else 'Prioritized lenses'}: {', '.join(lenses_to_compare if is_comparison else prioritized_lenses)}
     Product examples: {product_examples}
 
     Guidelines:
-    1. Focus on relevant lens types and characteristics
+    1. {'Focus on comparing the specified lens types' if is_comparison else 'Focus on relevant lens types and characteristics'}
     2. Briefly mention product examples without recommending
     3. Relate to user's lifestyle and activities
     4. Use simple language and short sentences
-    5. Limit to 150 words maximum
-    6. Use 3-4 bullet points
+    5. Limit to 200 words maximum
+    6. Use bullet points for clarity
     7. Don't make recommendations
     8. Encourage consulting an eye doctor
 
-    Provide a concise, informative response:
+    {'Provide a clear comparison between the specified lens types, highlighting key differences and similarities.' if is_comparison else 'Provide a concise, informative response about the relevant lens types.'}
     """
     merge_messages = [{"role": "user", "content": merge_prompt}]
     return chat_with_gpt(merge_messages)
