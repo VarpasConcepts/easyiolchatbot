@@ -325,7 +325,7 @@ def main():
         if doctor_name and prioritized_lenses:
             st.session_state.doctor_name = doctor_name
             st.session_state.prioritized_lenses = prioritized_lenses
-            initial_greeting = f"Hello! I'm Dr. {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"
+            initial_greeting = f"Hello! I'm {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"
             name_request = "Before we begin, I'd love to know your name. What should I call you?"
             
             st.session_state.messages = [
