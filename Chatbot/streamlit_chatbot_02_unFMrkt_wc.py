@@ -139,15 +139,26 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
     comparison_keywords = ["compare", "comparison", "difference", "versus", "vs"]
     is_comparison = any(keyword in query.lower() for keyword in comparison_keywords)
     
+    # Check if this is a query about a specific lens type
+    lens_types = ["monofocal", "multifocal", "toric", "light adjustable"]
+    specific_lens_query = next((lens for lens in lens_types if lens in query.lower()), None)
+    
     if is_comparison:
         # Identify which lenses are being compared
-        lenses_to_compare = []
-        for lens in ["monofocal", "multifocal", "toric", "light adjustable"]:
-            if lens in query.lower():
-                lenses_to_compare.append(lens.capitalize())
+        lenses_to_compare = [lens.capitalize() for lens in lens_types if lens in query.lower()]
         
         if len(lenses_to_compare) < 2:
             return "I'm sorry, but I couldn't identify which specific lens types you want to compare. Could you please clarify which lens types you'd like me to compare?"
+
+    # Existing logic for other queries
+    if is_marketing_appropriate(query):
+        langchain_answer, _ = query_knowledge_base(query, vectorstore)
+        if langchain_answer:
+            refined_response = refine_langchain_response(langchain_answer, query, prioritized_lenses)
+            return merge_responses(refined_response, query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison, lenses_to_compare if is_comparison else None, specific_lens_query)
+    
+    # If not marketing appropriate or LangChain doesn't provide an answer, use ChatGPT
+    return chat_with_gpt(st.session_state.messages)
 
     # Existing logic for other queries
     if is_marketing_appropriate(query):
