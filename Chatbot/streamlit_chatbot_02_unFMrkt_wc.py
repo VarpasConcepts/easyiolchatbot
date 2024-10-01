@@ -49,9 +49,20 @@ def query_knowledge_base(query, vectorstore):
 
 def chat_with_gpt(messages):
     try:
+        # Add a system message to encourage concise responses
+        system_message = {
+            "role": "system",
+            "content": "You are a helpful assistant providing information about IOLs. Please aim to keep your responses concise, ideally between 150-200 words. Cover all relevant information but prioritize brevity and clarity. If a longer response is absolutely necessary to adequately address the query, you may exceed this limit, but strive to be as concise as possible."
+        }
+        
+        # Insert the system message at the beginning of the messages list
+        messages.insert(0, system_message)
+        
         response = client.chat.completions.create(
             model="gpt-4-turbo",
             messages=messages,
+            max_tokens=300,  # This is a soft limit, approximately 225 words
+            temperature=0.7  # Slightly increase randomness to encourage varied, concise responses
         )
         time.sleep(1)  # Add delay to prevent hitting rate limits
         return response.choices[0].message.content
