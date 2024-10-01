@@ -282,8 +282,8 @@ def main():
             st.session_state.prioritized_lenses = prioritized_lenses
             st.session_state.messages = [
                 {"role": "system", "content": "You are an AI assistant for IOL selection."},
-                {"role": "assistant", "content": f"Hi {name}! I'm {doctor_name}'s friendly virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your unique lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"},
-                {"role": "assistant", "content": f"Before we dive into the details about IOLs, I'd love to get to know you better. Could you share a little bit about your day-to-day life and the activities you enjoy? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"}
+                {"role": "assistant", "content": f"Hi {name}! I'm {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"},
+                {"role": "assistant", "content": f"Before we dive into the details about IOLs, I'd love to get to know you better. Could you share a little bit about lifestyle and the your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"}
             ]
             st.session_state.chat_history = [
                 ("bot", f"Hi {name}! I'm {doctor_name}'s friendly virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your unique lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"),
