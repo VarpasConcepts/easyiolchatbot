@@ -89,6 +89,20 @@ def is_marketing_appropriate(query):
     return response.strip().lower() == 'yes'
 
 def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
+    # Check if this is the first response after user shares their lifestyle
+    if not st.session_state.show_lens_options:
+        st.session_state.show_lens_options = True
+        lens_descriptions = []
+        for lens in prioritized_lenses:
+            description = get_lens_description(lens, user_lifestyle)
+            if description:
+                lens_descriptions.append(f"- {lens}: {description}")
+        
+        response = "Here are the lenses recommended for you:\n\n"
+        response += "\n\n".join(lens_descriptions)
+        response += "\n\nWould you like more information about any of these lenses?"
+        return response
+
     # Check if the query is about doctor's lens suggestions
     if any(keyword in query.lower() for keyword in ["what lenses", "which lenses", "doctor suggest", "doctor recommend"]):
         lens_descriptions = []
@@ -309,10 +323,10 @@ def main():
 
             if not st.session_state.show_lens_options:
                 st.session_state.user_lifestyle = user_input
-                empathetic_message = "Thank you for sharing that. Your surgeon has recommended some specific lenses for you. Would you like to know about these options?"
-                st.session_state.messages.append({"role": "assistant", "content": empathetic_message})
-                st.session_state.chat_history.append(("bot", empathetic_message))
-                st.session_state.show_lens_options = True
+                with st.spinner("Processing your information..."):
+                    bot_response = process_query(user_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+                    st.session_state.messages.append({"role": "assistant", "content": bot_response})
+                    st.session_state.chat_history.append(("bot", bot_response))
             else:
                 with st.spinner("Processing your question..."):
                     bot_response = process_query(user_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
