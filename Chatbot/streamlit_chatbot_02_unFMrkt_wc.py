@@ -102,7 +102,7 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
             if description:
                 lens_descriptions.append(f"- {lens}: {description}")
         
-        response = f"Dr. {st.session_state.doctor_name} has thoughtfully suggested the following lenses for you. I'd be happy to explain how each of these options might fit into your lifestyle. Please feel free to ask any questions you might have about these lenses - I'm here to help!\n\n"
+        response = f"{st.session_state.doctor_name} has suggested the following lenses for you. I'd be happy to explain how each of these options might fit into your lifestyle. Please feel free to ask any questions you might have about these lenses - I'm here to help!\n\n"
         response += "\n\n".join(lens_descriptions)
         response += "\n\nIs there a particular lens you'd like to know more about?"
         return response
