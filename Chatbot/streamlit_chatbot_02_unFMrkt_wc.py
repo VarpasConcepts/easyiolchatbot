@@ -160,16 +160,6 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
     # If not marketing appropriate or LangChain doesn't provide an answer, use ChatGPT
     return chat_with_gpt(st.session_state.messages)
 
-    # Existing logic for other queries
-    if is_marketing_appropriate(query):
-        langchain_answer, _ = query_knowledge_base(query, vectorstore)
-        if langchain_answer:
-            refined_response = refine_langchain_response(langchain_answer, query, prioritized_lenses)
-            return merge_responses(refined_response, query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison, lenses_to_compare if is_comparison else None)
-    
-    # If not marketing appropriate or LangChain doesn't provide an answer, use ChatGPT
-    return chat_with_gpt(st.session_state.messages)
-
 def refine_langchain_response(langchain_answer, user_query, prioritized_lenses):
     gpt_prompt = f"""
     Refine this answer about IOL lenses, making it conversational and easy to understand:
@@ -255,15 +245,14 @@ def read_file(file):
         data = content.splitlines()
         if len(data) < 4:
             st.error("The uploaded file does not contain enough information.")
-            return None, None, None, None
+            return None, None, None
         doctor_name = data[0].split(':')[1].strip()
-        name = data[1].split(':')[1].strip()
         age = data[2].split(':')[1].strip()
         lenses = data[3].split(':')[1].strip().split(',')
-        return doctor_name, name, age, [lens.strip() for lens in lenses]
+        return doctor_name, age, [lens.strip() for lens in lenses]
     except Exception as e:
         st.error(f"Error reading file: {e}")
-        return None, None, None, None
+        return None, None, None
 
 def main():
     st.set_page_config(page_title="AI-ASSISTANT FOR IOL EDUCATION", layout="wide")
@@ -325,24 +314,27 @@ def main():
         st.session_state.greeted = False
     if 'doctor_name' not in st.session_state:
         st.session_state.doctor_name = ""
+    if 'asked_name' not in st.session_state:
+        st.session_state.asked_name = False
+    if 'user_name' not in st.session_state:
+        st.session_state.user_name = ""
 
     uploaded_file = st.file_uploader("Upload the .txt file with patient details", type=["txt"])
 
     if uploaded_file is not None and not st.session_state.greeted:
-        doctor_name, name, age, prioritized_lenses = read_file(uploaded_file)
-        if doctor_name and name and age and prioritized_lenses:
+        doctor_name, age, prioritized_lenses = read_file(uploaded_file)
+        if doctor_name and age and prioritized_lenses:
             st.session_state.doctor_name = doctor_name
             st.session_state.prioritized_lenses = prioritized_lenses
             st.session_state.messages = [
                 {"role": "system", "content": "You are an AI assistant for IOL selection."},
-                {"role": "assistant", "content": f"Hi {name}! I'm {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"},
-                {"role": "assistant", "content": f"Before we dive into the details about IOLs, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"}
+                {"role": "assistant", "content": f"Hello! I'm Dr. {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"}
             ]
             st.session_state.chat_history = [
-                ("bot", f"Hi {name}! I'm {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"),
-                ("bot", f"Before we dive into the details about IOLs, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!")
+                ("bot", f"Hello! I'm Dr. {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!")
             ]
             st.session_state.greeted = True
+            st.session_state.asked_name = False
         else:
             st.error("Unable to process the uploaded file. Please check the file format.")
 
@@ -380,7 +372,18 @@ def main():
             st.session_state.messages.append({"role": "user", "content": user_input})
             st.session_state.chat_history.append(("user", user_input))
 
-            if not st.session_state.show_lens_options:
+            if not st.session_state.asked_name:
+                st.session_state.user_name = user_input
+                bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
+                st.session_state.messages.append({"role": "assistant", "content": bot_response})
+                st.session_state.chat_history.append(("bot", bot_response))
+                
+                lifestyle_question = "Before we dive into the details about IOLs, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
+                st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
+                st.session_state.chat_history.append(("bot", lifestyle_question))
+                
+                st.session_state.asked_name = True
+            elif not st.session_state.show_lens_options:
                 st.session_state.user_lifestyle = user_input
                 with st.spinner("Processing your information..."):
                     bot_response = process_query(user_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
