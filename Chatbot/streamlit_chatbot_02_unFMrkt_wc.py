@@ -215,7 +215,7 @@ def read_file(file):
         return None, None, None
 
 def main():
-    st.set_page_config(page_title="IOL Selection Chatbot", layout="wide")
+    st.set_page_config(page_title="AI-ASSISTANT FOR IOL EDUCATION", layout="wide")
     
     # Set the theme to dark mode and add chat bubble styles
     st.markdown("""
