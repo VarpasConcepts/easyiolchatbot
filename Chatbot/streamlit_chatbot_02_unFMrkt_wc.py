@@ -93,27 +93,35 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
     if not st.session_state.show_lens_options:
         st.session_state.show_lens_options = True
         lens_descriptions = []
-        for lens in prioritized_lenses:
+        
+        # Ensure monofocal lens is always first
+        ordered_lenses = ['Monofocal'] + [lens for lens in prioritized_lenses if lens != 'Monofocal']
+        
+        for lens in ordered_lenses:
             description = get_lens_description(lens, user_lifestyle)
             if description:
                 lens_descriptions.append(f"- {lens}: {description}")
         
-        response = "Based on the information provided, your doctor suggested the following lenses:\n\n"
+        response = f"Dr. {st.session_state.doctor_name} has thoughtfully suggested the following lenses for you. I'd be happy to explain how each of these options might fit into your lifestyle. Please feel free to ask any questions you might have about these lenses - I'm here to help!\n\n"
         response += "\n\n".join(lens_descriptions)
-        response += "\n\nWould you like more information about any of these lenses?"
+        response += "\n\nIs there a particular lens you'd like to know more about?"
         return response
 
     # Check if the query is about doctor's lens suggestions
     if any(keyword in query.lower() for keyword in ["what lenses", "which lenses", "doctor suggest", "doctor recommend"]):
         lens_descriptions = []
-        for lens in prioritized_lenses:
+        
+        # Ensure monofocal lens is always first
+        ordered_lenses = ['Monofocal'] + [lens for lens in prioritized_lenses if lens != 'Monofocal']
+        
+        for lens in ordered_lenses:
             description = get_lens_description(lens, user_lifestyle)
             if description:
                 lens_descriptions.append(f"- {lens}: {description}")
         
-        response = "Based on the information provided, your doctor suggested the following lenses:\n\n"
+        response = f"Dr. {st.session_state.doctor_name} has thoughtfully suggested the following lenses for you. I'd be happy to explain how each of these options might fit into your lifestyle. Please feel free to ask any questions you might have about these lenses - I'm here to help!\n\n"
         response += "\n\n".join(lens_descriptions)
-        response += "\n\nPlease note that these suggestions are based on your specific needs. Always consult with your doctor for the most accurate advice."
+        response += "\n\nPlease remember, these suggestions are tailored to your unique needs. If you have any specific questions about these lenses, don't hesitate to ask!"
         return response
 
     # Existing logic for other queries
@@ -273,12 +281,15 @@ def main():
         st.session_state.show_lens_options = False
     if 'greeted' not in st.session_state:
         st.session_state.greeted = False
+    if 'doctor_name' not in st.session_state:
+        st.session_state.doctor_name = ""
 
     uploaded_file = st.file_uploader("Upload the .txt file with patient details", type=["txt"])
 
     if uploaded_file is not None and not st.session_state.greeted:
         doctor_name, name, age, prioritized_lenses = read_file(uploaded_file)
         if doctor_name and name and age and prioritized_lenses:
+            st.session_state.doctor_name = doctor_name
             st.session_state.prioritized_lenses = prioritized_lenses
             st.session_state.messages = [
                 {"role": "system", "content": "You are an AI assistant for IOL selection."},
