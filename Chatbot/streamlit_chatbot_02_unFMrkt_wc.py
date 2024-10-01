@@ -197,9 +197,11 @@ def get_product_example(lens_type, vectorstore):
     result, _ = query_knowledge_base(query, vectorstore)
     return result if result else ""
 
-def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison=False, lenses_to_compare=None):
+def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison=False, lenses_to_compare=None, specific_lens_query=None):
     if is_comparison and lenses_to_compare:
         lens_types = lenses_to_compare
+    elif specific_lens_query:
+        lens_types = [specific_lens_query.capitalize()]
     else:
         lens_types = ['Monofocal', 'Multifocal', 'Toric', 'Light Adjustable']
     
@@ -213,11 +215,11 @@ def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_l
     Query: {user_query}
     Refined answer: {langchain_refined}
     User lifestyle: {user_lifestyle}
-    {'Lenses to compare' if is_comparison else 'Prioritized lenses'}: {', '.join(lenses_to_compare if is_comparison else prioritized_lenses)}
+    {'Lenses to compare' if is_comparison else 'Specific lens' if specific_lens_query else 'Prioritized lenses'}: {', '.join(lenses_to_compare if is_comparison else [specific_lens_query.capitalize()] if specific_lens_query else prioritized_lenses)}
     Product examples: {product_examples}
 
     Guidelines:
-    1. {'Focus on comparing the specified lens types' if is_comparison else 'Focus on relevant lens types and characteristics'}
+    1. {'Focus on comparing the specified lens types' if is_comparison else 'Focus primarily on the specified lens type' if specific_lens_query else 'Focus on relevant lens types and characteristics'}
     2. Briefly mention product examples without recommending
     3. Relate to user's lifestyle and activities
     4. Use simple language and short sentences
@@ -226,7 +228,7 @@ def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_l
     7. Don't make recommendations
     8. Encourage consulting an eye doctor
 
-    {'Provide a clear comparison between the specified lens types, highlighting key differences and similarities.' if is_comparison else 'Provide a concise, informative response about the relevant lens types.'}
+    {'Provide a clear comparison between the specified lens types, highlighting key differences and similarities.' if is_comparison else 'Provide detailed information about the specified lens type, with brief mentions of other types only if directly relevant for context.' if specific_lens_query else 'Provide a concise, informative response about the relevant lens types.'}
     """
     merge_messages = [{"role": "user", "content": merge_prompt}]
     return chat_with_gpt(merge_messages)
