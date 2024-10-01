@@ -20,10 +20,16 @@ storage_directory = "./faiss_index"
 def load_vectorstore():
     embeddings = OpenAIEmbeddings()
     try:
-        return FAISS.load_local(storage_directory, embeddings, allow_dangerous_deserialization=True)
+        # Use a relative path
+        index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
+        return FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
     except Exception as e:
         st.error(f"Error loading index: {e}")
+        st.error("The FAISS index file is missing or cannot be accessed. Please check the file path and permissions.")
         return None
+
+# Update the storage_directory variable
+storage_directory = os.path.join(os.path.dirname(__file__), "faiss_index")
 
 def query_knowledge_base(query, vectorstore):
     if vectorstore is None:
