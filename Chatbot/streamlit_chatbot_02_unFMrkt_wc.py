@@ -243,16 +243,15 @@ def read_file(file):
     try:
         content = file.getvalue().decode("utf-8")
         data = content.splitlines()
-        if len(data) < 4:
+        if len(data) < 2:
             st.error("The uploaded file does not contain enough information.")
-            return None, None, None
+            return None, None
         doctor_name = data[0].split(':')[1].strip()
-        age = data[2].split(':')[1].strip()
-        lenses = data[3].split(':')[1].strip().split(',')
-        return doctor_name, age, [lens.strip() for lens in lenses]
+        lenses = data[1].split(':')[1].strip().split(',')
+        return doctor_name, [lens.strip() for lens in lenses]
     except Exception as e:
         st.error(f"Error reading file: {e}")
-        return None, None, None
+        return None, None
 
 def main():
     st.set_page_config(page_title="AI-ASSISTANT FOR IOL EDUCATION", layout="wide")
@@ -322,11 +321,11 @@ def main():
     uploaded_file = st.file_uploader("Upload the .txt file with patient details", type=["txt"])
 
     if uploaded_file is not None and not st.session_state.greeted:
-        doctor_name, age, prioritized_lenses = read_file(uploaded_file)
-        if doctor_name and age and prioritized_lenses:
+        doctor_name, prioritized_lenses = read_file(uploaded_file)
+        if doctor_name and prioritized_lenses:
             st.session_state.doctor_name = doctor_name
             st.session_state.prioritized_lenses = prioritized_lenses
-            initial_greeting = f"Hello! I'm {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"
+            initial_greeting = f"Hello! I'm Dr. {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"
             name_request = "Before we begin, I'd love to know your name. What should I call you?"
             
             st.session_state.messages = [
