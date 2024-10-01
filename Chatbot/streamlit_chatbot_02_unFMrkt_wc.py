@@ -326,15 +326,20 @@ def main():
         if doctor_name and age and prioritized_lenses:
             st.session_state.doctor_name = doctor_name
             st.session_state.prioritized_lenses = prioritized_lenses
+            initial_greeting = f"Hello! I'm Dr. {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"
+            name_request = "Before we begin, I'd love to know your name. What should I call you?"
+            
             st.session_state.messages = [
                 {"role": "system", "content": "You are an AI assistant for IOL selection."},
-                {"role": "assistant", "content": f"Hello! I'm Dr. {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"}
+                {"role": "assistant", "content": initial_greeting},
+                {"role": "assistant", "content": name_request}
             ]
             st.session_state.chat_history = [
-                ("bot", f"Hello! I'm Dr. {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!")
+                ("bot", initial_greeting),
+                ("bot", name_request)
             ]
             st.session_state.greeted = True
-            st.session_state.asked_name = False
+            st.session_state.asked_name = True
         else:
             st.error("Unable to process the uploaded file. Please check the file format.")
 
@@ -372,17 +377,16 @@ def main():
             st.session_state.messages.append({"role": "user", "content": user_input})
             st.session_state.chat_history.append(("user", user_input))
 
-            if not st.session_state.asked_name:
+            if st.session_state.asked_name and not st.session_state.user_name:
                 st.session_state.user_name = user_input
                 bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
                 st.session_state.messages.append({"role": "assistant", "content": bot_response})
                 st.session_state.chat_history.append(("bot", bot_response))
                 
-                lifestyle_question = "Before we dive into the details about IOLs, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
+                lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
                 st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
                 st.session_state.chat_history.append(("bot", lifestyle_question))
                 
-                st.session_state.asked_name = True
             elif not st.session_state.show_lens_options:
                 st.session_state.user_lifestyle = user_input
                 with st.spinner("Processing your information..."):
