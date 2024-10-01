@@ -203,16 +203,17 @@ def read_file(file):
     try:
         content = file.getvalue().decode("utf-8")
         data = content.splitlines()
-        if len(data) < 3:
+        if len(data) < 4:
             st.error("The uploaded file does not contain enough information.")
-            return None, None, None
-        name = data[0].split(':')[1].strip()
-        age = data[1].split(':')[1].strip()
-        lenses = data[2].split(':')[1].strip().split(',')
-        return name, age, [lens.strip() for lens in lenses]
+            return None, None, None, None
+        doctor_name = data[0].split(':')[1].strip()
+        name = data[1].split(':')[1].strip()
+        age = data[2].split(':')[1].strip()
+        lenses = data[3].split(':')[1].strip().split(',')
+        return doctor_name, name, age, [lens.strip() for lens in lenses]
     except Exception as e:
         st.error(f"Error reading file: {e}")
-        return None, None, None
+        return None, None, None, None
 
 def main():
     st.set_page_config(page_title="AI-ASSISTANT FOR IOL EDUCATION", layout="wide")
@@ -256,7 +257,7 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
-    st.title("AI-Assisitant for IOL Education")
+    st.title("AI-Assistant for IOL Education")
 
     vectorstore = load_vectorstore()
 
@@ -276,17 +277,17 @@ def main():
     uploaded_file = st.file_uploader("Upload the .txt file with patient details", type=["txt"])
 
     if uploaded_file is not None and not st.session_state.greeted:
-        name, age, prioritized_lenses = read_file(uploaded_file)
-        if name and age and prioritized_lenses:
+        doctor_name, name, age, prioritized_lenses = read_file(uploaded_file)
+        if doctor_name and name and age and prioritized_lenses:
             st.session_state.prioritized_lenses = prioritized_lenses
             st.session_state.messages = [
                 {"role": "system", "content": "You are an AI assistant for IOL selection."},
-                {"role": "assistant", "content": f"Hi {name}! It's really nice to meet you. I understand cataract surgery can feel overwhelming, but I'm here to make things easier."},
-                {"role": "assistant", "content": "Could you share a bit about your daily activities? This will help me understand your vision needs better."}
+                {"role": "assistant", "content": f"Hi {name}! I'm {doctor_name}'s friendly virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your unique lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"},
+                {"role": "assistant", "content": f"Before we dive into the details about IOLs, I'd love to get to know you better. Could you share a little bit about your day-to-day life and the activities you enjoy? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"}
             ]
             st.session_state.chat_history = [
-                ("bot", f"Hi {name}! It's really nice to meet you. I understand cataract surgery can feel overwhelming, but I'm here to make things easier."),
-                ("bot", "Could you share a bit about your daily activities? This will help me understand your vision needs better.")
+                ("bot", f"Hi {name}! I'm {doctor_name}'s friendly virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your unique lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"),
+                ("bot", f"Before we dive into the details about IOLs, I'd love to get to know you better. Could you share a little bit about your day-to-day life and the activities you enjoy? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!")
             ]
             st.session_state.greeted = True
         else:
