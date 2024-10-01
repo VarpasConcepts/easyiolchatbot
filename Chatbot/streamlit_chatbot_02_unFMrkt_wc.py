@@ -8,7 +8,7 @@ from langchain_openai import OpenAI as LangChainOpenAI
 import time
 
 # Set your OpenAI API key
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 # Initialize the OpenAI client
 client = OpenAI()
