@@ -256,7 +256,7 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
-    st.title("IOL Selection Chatbot")
+    st.title("AI-Assisitant for IOL Education")
 
     vectorstore = load_vectorstore()
 
