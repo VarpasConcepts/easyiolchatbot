@@ -313,8 +313,13 @@ def main():
         st.markdown("<div style='margin-bottom: 100px;'></div>", unsafe_allow_html=True)
 
     if st.session_state.greeted:
+        # Initialize the input key in session state if it doesn't exist
+        if 'input_key' not in st.session_state:
+            st.session_state.input_key = 0
+
         with st.form(key='message_form'):
-            user_input = st.text_input("You:", key="user_input")
+            # Use a unique key for the text input field
+            user_input = st.text_input("You:", key=f"user_input_{st.session_state.input_key}")
             submit_button = st.form_submit_button(label='Send')
 
         if submit_button and user_input:
@@ -337,6 +342,8 @@ def main():
                     else:
                         st.error("Sorry, I couldn't generate a response. Please try again.")
 
+            # Increment the input key to force a reset of the input field
+            st.session_state.input_key += 1
             st.experimental_rerun()
 
 if __name__ == "__main__":
