@@ -14,22 +14,18 @@ os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 client = OpenAI()
 
 # Directory where the FAISS index is stored
-storage_directory = "./faiss_index"
+storage_directory = "faiss_index"
 
 @st.cache_resource
 def load_vectorstore():
     embeddings = OpenAIEmbeddings()
     try:
-        # Use a relative path
-        index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
+        index_path = os.path.join(os.path.dirname(__file__), storage_directory)
         return FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
     except Exception as e:
         st.error(f"Error loading index: {e}")
         st.error("The FAISS index file is missing or cannot be accessed. Please check the file path and permissions.")
         return None
-
-# Update the storage_directory variable
-storage_directory = os.path.join(os.path.dirname(__file__), "faiss_index")
 
 def query_knowledge_base(query, vectorstore):
     if vectorstore is None:
@@ -190,12 +186,19 @@ def get_lens_description(lens_name, user_lifestyle):
     return chat_with_gpt(gpt_messages)
 
 def read_file(file):
-    content = file.read().decode("utf-8")
-    data = content.splitlines()
-    name = data[0].split(':')[1].strip()
-    age = data[1].split(':')[1].strip()
-    lenses = data[2].split(':')[1].strip().split(',')
-    return name, age, [lens.strip() for lens in lenses]
+    try:
+        content = file.getvalue().decode("utf-8")
+        data = content.splitlines()
+        if len(data) < 3:
+            st.error("The uploaded file does not contain enough information.")
+            return None, None, None
+        name = data[0].split(':')[1].strip()
+        age = data[1].split(':')[1].strip()
+        lenses = data[2].split(':')[1].strip().split(',')
+        return name, age, [lens.strip() for lens in lenses]
+    except Exception as e:
+        st.error(f"Error reading file: {e}")
+        return None, None, None
 
 def main():
     st.set_page_config(page_title="IOL Selection Chatbot", layout="wide")
@@ -260,17 +263,20 @@ def main():
 
     if uploaded_file is not None and not st.session_state.greeted:
         name, age, prioritized_lenses = read_file(uploaded_file)
-        st.session_state.prioritized_lenses = prioritized_lenses
-        st.session_state.messages = [
-            {"role": "system", "content": "You are an AI assistant for IOL selection."},
-            {"role": "assistant", "content": f"Hi {name}! It's really nice to meet you. I understand cataract surgery can feel overwhelming, but I'm here to make things easier."},
-            {"role": "assistant", "content": "Could you share a bit about your daily activities? This will help me understand your vision needs better."}
-        ]
-        st.session_state.chat_history = [
-            ("bot", f"Hi {name}! It's really nice to meet you. I understand cataract surgery can feel overwhelming, but I'm here to make things easier."),
-            ("bot", "Could you share a bit about your daily activities? This will help me understand your vision needs better.")
-        ]
-        st.session_state.greeted = True
+        if name and age and prioritized_lenses:
+            st.session_state.prioritized_lenses = prioritized_lenses
+            st.session_state.messages = [
+                {"role": "system", "content": "You are an AI assistant for IOL selection."},
+                {"role": "assistant", "content": f"Hi {name}! It's really nice to meet you. I understand cataract surgery can feel overwhelming, but I'm here to make things easier."},
+                {"role": "assistant", "content": "Could you share a bit about your daily activities? This will help me understand your vision needs better."}
+            ]
+            st.session_state.chat_history = [
+                ("bot", f"Hi {name}! It's really nice to meet you. I understand cataract surgery can feel overwhelming, but I'm here to make things easier."),
+                ("bot", "Could you share a bit about your daily activities? This will help me understand your vision needs better.")
+            ]
+            st.session_state.greeted = True
+        else:
+            st.error("Unable to process the uploaded file. Please check the file format.")
 
     # Chat bubble display
     chat_container = st.container()
@@ -293,47 +299,31 @@ def main():
         st.markdown("<div style='margin-bottom: 100px;'></div>", unsafe_allow_html=True)
 
     if st.session_state.greeted:
-        # Use a unique key for the text input to ensure it resets
-        user_input = st.text_input("You:", key="user_input_" + str(len(st.session_state.chat_history)))
-        
-        # Create a form to handle both button click and Enter key press
-        with st.form(key='message_form', clear_on_submit=True):
+        with st.form(key='message_form'):
+            user_input = st.text_input("You:", key="user_input")
             submit_button = st.form_submit_button(label='Send')
 
-        if submit_button or (user_input and not st.session_state.get('prev_input') == user_input):
-            if user_input:
-                st.session_state['prev_input'] = user_input  # Store current input to prevent double processing
-                st.session_state.messages.append({"role": "user", "content": user_input})
-                st.session_state.chat_history.append(("user", user_input))
+        if submit_button and user_input:
+            st.session_state.messages.append({"role": "user", "content": user_input})
+            st.session_state.chat_history.append(("user", user_input))
 
-                if not st.session_state.show_lens_options:
-                    st.session_state.user_lifestyle = user_input
-                    empathetic_message = "Thank you for sharing that. Your surgeon has recommended some specific lenses for you. Would you like to know about these options?"
-                    st.session_state.messages.append({"role": "assistant", "content": empathetic_message})
-                    st.session_state.chat_history.append(("bot", empathetic_message))
-                    st.session_state.show_lens_options = True
+            if not st.session_state.show_lens_options:
+                st.session_state.user_lifestyle = user_input
+                empathetic_message = "Thank you for sharing that. Your surgeon has recommended some specific lenses for you. Would you like to know about these options?"
+                st.session_state.messages.append({"role": "assistant", "content": empathetic_message})
+                st.session_state.chat_history.append(("bot", empathetic_message))
+                st.session_state.show_lens_options = True
+            else:
+                with st.spinner("Processing your question..."):
+                    bot_response = process_query(user_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
 
-                    # Add lens descriptions to chat history
-                    lens_descriptions = []
-                    for lens in st.session_state.prioritized_lenses:
-                        description = get_lens_description(lens, st.session_state.user_lifestyle)
-                        if description:
-                            lens_descriptions.append(f"- {lens}:\n{description}")
-                    
-                    if lens_descriptions:
-                        lens_info = "Here are the lenses recommended for you:\n\n" + "\n\n".join(lens_descriptions)
-                        st.session_state.chat_history.append(("bot", lens_info))
-                else:
-                    with st.spinner("Processing your question..."):
-                        bot_response = process_query(user_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+                    if bot_response:
+                        st.session_state.messages.append({"role": "assistant", "content": bot_response})
+                        st.session_state.chat_history.append(("bot", bot_response))
+                    else:
+                        st.error("Sorry, I couldn't generate a response. Please try again.")
 
-                        if bot_response:
-                            st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                            st.session_state.chat_history.append(("bot", bot_response))
-                        else:
-                            st.error("Sorry, I couldn't generate a response. Please try again.")
-
-                st.experimental_rerun()
+            st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
