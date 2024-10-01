@@ -1,0 +1,333 @@
+import os
+import streamlit as st
+from openai import OpenAI
+from langchain_community.vectorstores import FAISS
+from langchain_openai import OpenAIEmbeddings
+from langchain.chains import RetrievalQA
+from langchain_openai import OpenAI as LangChainOpenAI
+import time
+
+# Set your OpenAI API key
+os.environ["OPENAI_API_KEY"] = "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"
+
+# Initialize the OpenAI client
+client = OpenAI()
+
+# Directory where the FAISS index is stored
+storage_directory = "./faiss_index"
+
+@st.cache_resource
+def load_vectorstore():
+    embeddings = OpenAIEmbeddings()
+    try:
+        return FAISS.load_local(storage_directory, embeddings, allow_dangerous_deserialization=True)
+    except Exception as e:
+        st.error(f"Error loading index: {e}")
+        return None
+
+def query_knowledge_base(query, vectorstore):
+    if vectorstore is None:
+        return None, None
+
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    llm = LangChainOpenAI(temperature=0)
+    qa_chain = RetrievalQA.from_chain_type(
+        llm=llm,
+        chain_type="stuff",
+        retriever=retriever,
+        return_source_documents=True
+    )
+
+    try:
+        result = qa_chain({"query": query})
+        return result["result"], result["source_documents"]
+    except Exception as e:
+        st.error(f"Error querying knowledge base: {e}")
+        return None, None
+
+def chat_with_gpt(messages):
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4-turbo",
+            messages=messages,
+        )
+        time.sleep(1)  # Add delay to prevent hitting rate limits
+        return response.choices[0].message.content
+    except Exception as e:
+        st.error(f"Error generating ChatGPT response: {e}")
+        return None
+
+def is_marketing_appropriate(query):
+    prompt = f"""
+    Determine if the following query about IOL lenses is appropriate for a marketing-focused response:
+
+    Query: {query}
+
+    A marketing-focused response would be appropriate if the query:
+    1. Asks about specific lens features or benefits
+    2. Compares different types of lenses
+    3. Inquires about lens brands or products
+    4. Seeks information on how lenses might improve quality of life
+    5. Asks about the advantages of certain lens technologies
+
+    It would NOT be appropriate if the query:
+    1. Asks for medical advice
+    2. Inquires about surgical procedures
+    3. Asks about potential risks or complications
+    4. Seeks personal recommendations
+    5. Asks about pricing or insurance coverage
+
+    Respond with only 'Yes' or 'No'.
+    """
+    messages = [
+        {"role": "system", "content": "You are an AI assistant that determines if queries are appropriate for marketing responses."},
+        {"role": "user", "content": prompt}
+    ]
+    response = chat_with_gpt(messages)
+    return response.strip().lower() == 'yes'
+
+def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
+    # Check if the query is about doctor's lens suggestions
+    if any(keyword in query.lower() for keyword in ["what lenses", "which lenses", "doctor suggest", "doctor recommend"]):
+        lens_descriptions = []
+        for lens in prioritized_lenses:
+            description = get_lens_description(lens, user_lifestyle)
+            if description:
+                lens_descriptions.append(f"- {lens}: {description}")
+        
+        response = "Based on the information provided, your doctor suggested the following lenses:\n\n"
+        response += "\n\n".join(lens_descriptions)
+        response += "\n\nPlease note that these suggestions are based on your specific needs. Always consult with your doctor for the most accurate advice."
+        return response
+
+    # Existing logic for other queries
+    if is_marketing_appropriate(query):
+        langchain_answer, _ = query_knowledge_base(query, vectorstore)
+        if langchain_answer:
+            refined_response = refine_langchain_response(langchain_answer, query, prioritized_lenses)
+            return merge_responses(refined_response, query, user_lifestyle, prioritized_lenses, vectorstore)
+    
+    # If not marketing appropriate or LangChain doesn't provide an answer, use ChatGPT
+    return chat_with_gpt(st.session_state.messages)
+
+def refine_langchain_response(langchain_answer, user_query, prioritized_lenses):
+    gpt_prompt = f"""
+    Refine this answer about IOL lenses, making it conversational and easy to understand:
+    
+    Query: {user_query}
+    Answer: {langchain_answer}
+    Prioritized lenses: {', '.join(prioritized_lenses)}
+
+    Guidelines:
+    - Use simple language and short sentences
+    - Focus on the most relevant information
+    - Prioritize information about the listed lenses
+    - Don't make recommendations
+    - Encourage consulting an eye doctor
+    - Limit the response to about 100 words
+    - Use bullet points for clarity
+
+    Provide a concise, user-friendly response:
+    """
+    gpt_messages = [{"role": "user", "content": gpt_prompt}]
+    return chat_with_gpt(gpt_messages)
+
+def get_product_example(lens_type, vectorstore):
+    query = f"Briefly name an example of a {lens_type} IOL product without recommending it. Use 10 words or less."
+    result, _ = query_knowledge_base(query, vectorstore)
+    return result if result else ""
+
+def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_lenses, vectorstore):
+    lens_types = ['monofocal', 'multifocal', 'toric']
+    mentioned_lenses = [lt for lt in lens_types if lt in langchain_refined.lower()]
+    
+    product_examples = "; ".join([f"{lens}: {get_product_example(lens, vectorstore)}" for lens in mentioned_lenses])
+    
+    merge_prompt = f"""
+    Create a concise response to this IOL lens query:
+    
+    Query: {user_query}
+    Refined answer: {langchain_refined}
+    User lifestyle: {user_lifestyle}
+    Prioritized lenses: {', '.join(prioritized_lenses)}
+    Product examples: {product_examples}
+
+    Guidelines:
+    1. Focus on relevant lens types and characteristics
+    2. Briefly mention product examples without recommending
+    3. Relate to user's lifestyle and activities
+    4. Use simple language and short sentences
+    5. Limit to 150 words maximum
+    6. Use 3-4 bullet points
+    7. Don't make recommendations
+    8. Encourage consulting an eye doctor
+
+    Provide a concise, informative response:
+    """
+    merge_messages = [{"role": "user", "content": merge_prompt}]
+    return chat_with_gpt(merge_messages)
+
+def get_lens_description(lens_name, user_lifestyle):
+    gpt_prompt = f"""
+    Briefly describe the {lens_name} intraocular lens (IOL) for a patient with this lifestyle: {user_lifestyle}. 
+    
+    Guidelines:
+    - Focus on how it fits daily activities or vision needs
+    - Use 1-2 short sentences only
+    - Be precise and concise
+    - Don't recommend; only describe
+    - Limit to 25 words maximum
+
+    Provide a short description:
+    """
+    gpt_messages = [{"role": "user", "content": gpt_prompt}]
+    return chat_with_gpt(gpt_messages)
+
+def read_file(file):
+    content = file.read().decode("utf-8")
+    data = content.splitlines()
+    name = data[0].split(':')[1].strip()
+    age = data[1].split(':')[1].strip()
+    lenses = data[2].split(':')[1].strip().split(',')
+    return name, age, [lens.strip() for lens in lenses]
+
+def main():
+    st.set_page_config(page_title="IOL Selection Chatbot", layout="wide")
+    
+    # Set the theme to dark mode and add chat bubble styles
+    st.markdown("""
+    <style>
+    .stApp {
+        background-color: #0E1117;
+        color: #FAFAFA;
+    }
+    .stTextInput > div > div > input {
+        background-color: #262730;
+        color: #FAFAFA;
+    }
+    .stButton > button {
+        background-color: #4CAF50;
+        color: #FFFFFF;
+    }
+    .chat-bubble {
+        padding: 10px 15px;
+        border-radius: 20px;
+        margin-bottom: 10px;
+        display: inline-block;
+        max-width: 70%;
+        word-wrap: break-word;
+    }
+    .bot-bubble {
+        background-color: #2C3E50;
+        float: left;
+        clear: both;
+    }
+    .user-bubble {
+        background-color: #4CAF50;
+        float: right;
+        clear: both;
+    }
+    .chat-container {
+        margin-bottom: 20px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    st.title("IOL Selection Chatbot")
+
+    vectorstore = load_vectorstore()
+
+    if 'messages' not in st.session_state:
+        st.session_state.messages = []
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    if 'user_lifestyle' not in st.session_state:
+        st.session_state.user_lifestyle = ""
+    if 'prioritized_lenses' not in st.session_state:
+        st.session_state.prioritized_lenses = []
+    if 'show_lens_options' not in st.session_state:
+        st.session_state.show_lens_options = False
+    if 'greeted' not in st.session_state:
+        st.session_state.greeted = False
+
+    uploaded_file = st.file_uploader("Upload the .txt file with patient details", type=["txt"])
+
+    if uploaded_file is not None and not st.session_state.greeted:
+        name, age, prioritized_lenses = read_file(uploaded_file)
+        st.session_state.prioritized_lenses = prioritized_lenses
+        st.session_state.messages = [
+            {"role": "system", "content": "You are an AI assistant for IOL selection."},
+            {"role": "assistant", "content": f"Hi {name}! It's really nice to meet you. I understand cataract surgery can feel overwhelming, but I'm here to make things easier."},
+            {"role": "assistant", "content": "Could you share a bit about your daily activities? This will help me understand your vision needs better."}
+        ]
+        st.session_state.chat_history = [
+            ("bot", f"Hi {name}! It's really nice to meet you. I understand cataract surgery can feel overwhelming, but I'm here to make things easier."),
+            ("bot", "Could you share a bit about your daily activities? This will help me understand your vision needs better.")
+        ]
+        st.session_state.greeted = True
+
+    # Chat bubble display
+    chat_container = st.container()
+    with chat_container:
+        for role, message in st.session_state.chat_history:
+            if role == "bot":
+                st.markdown(f"""
+                <div class="chat-bubble bot-bubble">
+                {message}
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="chat-bubble user-bubble">
+                {message}
+                </div>
+                """, unsafe_allow_html=True)
+        
+        # Add some space after the chat bubbles
+        st.markdown("<div style='margin-bottom: 100px;'></div>", unsafe_allow_html=True)
+
+    if st.session_state.greeted:
+        # Use a unique key for the text input to ensure it resets
+        user_input = st.text_input("You:", key="user_input_" + str(len(st.session_state.chat_history)))
+        
+        # Create a form to handle both button click and Enter key press
+        with st.form(key='message_form', clear_on_submit=True):
+            submit_button = st.form_submit_button(label='Send')
+
+        if submit_button or (user_input and not st.session_state.get('prev_input') == user_input):
+            if user_input:
+                st.session_state['prev_input'] = user_input  # Store current input to prevent double processing
+                st.session_state.messages.append({"role": "user", "content": user_input})
+                st.session_state.chat_history.append(("user", user_input))
+
+                if not st.session_state.show_lens_options:
+                    st.session_state.user_lifestyle = user_input
+                    empathetic_message = "Thank you for sharing that. Your surgeon has recommended some specific lenses for you. Would you like to know about these options?"
+                    st.session_state.messages.append({"role": "assistant", "content": empathetic_message})
+                    st.session_state.chat_history.append(("bot", empathetic_message))
+                    st.session_state.show_lens_options = True
+
+                    # Add lens descriptions to chat history
+                    lens_descriptions = []
+                    for lens in st.session_state.prioritized_lenses:
+                        description = get_lens_description(lens, st.session_state.user_lifestyle)
+                        if description:
+                            lens_descriptions.append(f"- {lens}:\n{description}")
+                    
+                    if lens_descriptions:
+                        lens_info = "Here are the lenses recommended for you:\n\n" + "\n\n".join(lens_descriptions)
+                        st.session_state.chat_history.append(("bot", lens_info))
+                else:
+                    with st.spinner("Processing your question..."):
+                        bot_response = process_query(user_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+
+                        if bot_response:
+                            st.session_state.messages.append({"role": "assistant", "content": bot_response})
+                            st.session_state.chat_history.append(("bot", bot_response))
+                        else:
+                            st.error("Sorry, I couldn't generate a response. Please try again.")
+
+                st.experimental_rerun()
+
+if __name__ == "__main__":
+    main()
