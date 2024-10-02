@@ -417,11 +417,12 @@ def main():
 
         if submit_button and user_input:
             with st.spinner("Processing your input..."):
-                # Fix spelling errors
+                # Fix spelling errors in the background
                 corrected_input = fix_spelling(user_input)
                 
-                st.session_state.messages.append({"role": "user", "content": corrected_input})
-                st.session_state.chat_history.append(("user", corrected_input))
+                # Use the original input for display, but corrected input for processing
+                st.session_state.messages.append({"role": "user", "content": user_input})
+                st.session_state.chat_history.append(("user", user_input))
                 st.session_state.question_count += 1
                 
                 # Print statement for debugging
@@ -469,5 +470,6 @@ def main():
             st.session_state.input_key += 1
             st.experimental_rerun()
 
+            
 if __name__ == "__main__":
     main()
