@@ -52,7 +52,7 @@ def chat_with_gpt(messages):
         # Add a system message to encourage concise responses
         system_message = {
             "role": "system",
-            "content": "You are a helpful assistant providing information about IOLs. Please aim to keep your responses concise, ideally between 150-200 words. Cover all relevant information but prioritize brevity and clarity. If a longer response is absolutely necessary to adequately address the query, you may exceed this limit, but strive to be as concise as possible."
+            "content": "You are a helpful assistant educating patients about IOLs. Please aim to keep your responses concise, ideally between 150-200 words. Cover all relevant information but prioritize brevity and clarity. If a longer response is absolutely necessary to adequately address the query, you may exceed this limit, but strive to be as concise as possible."
         }
         
         # Insert the system message at the beginning of the messages list
@@ -78,10 +78,9 @@ def is_marketing_appropriate(query):
 
     A marketing-focused response would be appropriate if the query:
     1. Asks about specific lens features or benefits
-    2. Compares different types of lenses
-    3. Inquires about lens brands or products
-    4. Seeks information on how lenses might improve quality of life
-    5. Asks about the advantages of certain lens technologies
+    2. Inquires about lens brands or products
+    3. Seeks information on how lenses might improve quality of life
+    4. Asks about the advantages of certain lens technologies
 
     It would NOT be appropriate if the query:
     1. Asks for medical advice
@@ -119,7 +118,7 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         return response
 
     # Check if the query is about doctor's lens suggestions
-    if any(keyword in query.lower() for keyword in ["what lenses", "which lenses", "doctor suggest", "doctor recommend"]):
+    if any(keyword in query.lower() for keyword in ["what lenses", "which lenses", "doctor suggest", "doctor recommend", "surgeon suggest", "surgeon recommend","clinic suggest", "clinic advise","clinic recomendation"]):
         lens_descriptions = []
         
         # Ensure monofocal lens is always first
@@ -234,7 +233,6 @@ def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_l
     merge_messages = [{"role": "user", "content": merge_prompt}]
     return chat_with_gpt(merge_messages)
 
-    
 def get_lens_description(lens_name, user_lifestyle):
     gpt_prompt = f"""
     Briefly describe the {lens_name} intraocular lens (IOL) for a patient with this lifestyle: {user_lifestyle}. 
