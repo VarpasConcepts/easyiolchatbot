@@ -320,7 +320,7 @@ def main():
     if 'question_count' not in st.session_state:
         st.session_state.question_count = 0
 
-    uploaded_file = st.file_uploader("Upload the .txt file with patient details", type=["txt"])
+    uploaded_file = st.file_uploader("Please upload the file your surgeon has provided you", type=["txt"])
 
     if uploaded_file is not None and not st.session_state.greeted:
         doctor_name, prioritized_lenses = read_file(uploaded_file)
