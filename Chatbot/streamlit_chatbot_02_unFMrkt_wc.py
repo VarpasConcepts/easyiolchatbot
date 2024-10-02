@@ -378,6 +378,9 @@ def main():
             st.session_state.messages.append({"role": "user", "content": user_input})
             st.session_state.chat_history.append(("user", user_input))
             st.session_state.question_count += 1
+            
+            # Print statement for debugging
+            print(f"Question count: {st.session_state.question_count}")
 
             if st.session_state.asked_name and not st.session_state.user_name:
                 st.session_state.user_name = user_input
@@ -403,11 +406,14 @@ def main():
                         st.session_state.messages.append({"role": "assistant", "content": bot_response})
                         st.session_state.chat_history.append(("bot", bot_response))
 
-                        # Check if it's time to ask the follow-up question
-                        if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
+                        # Adjust condition to trigger more frequently for testing
+                        if st.session_state.question_count >= 3:  # Changed from 5 to 3 for testing
                             follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
                             st.session_state.messages.append({"role": "assistant", "content": follow_up})
                             st.session_state.chat_history.append(("bot", follow_up))
+                            
+                            # Print statement for debugging
+                            print("Follow-up prompt added to chat history")
                     else:
                         st.error("Sorry, I couldn't generate a response. Please try again.")
 
