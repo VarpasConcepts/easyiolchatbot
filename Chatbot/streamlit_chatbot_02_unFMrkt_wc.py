@@ -263,6 +263,37 @@ def read_file(file):
         st.error(f"Error reading file: {e}")
         return None, None
 
+def fix_spelling(query):
+    prompt = f"""
+    Please fix any spelling errors in the following text, but do not make any other changes:
+
+    {query}
+
+    Corrected text:
+    """
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant that corrects spelling errors."},
+        {"role": "user", "content": prompt}
+    ]
+    corrected_query = chat_with_gpt(messages)
+    return corrected_query.strip()
+
+def extract_name(input_text):
+    prompt = f"""
+    Please extract the name from the following input. If there's no clear name, respond with "None".
+    Only provide the extracted name or "None", nothing else.
+
+    Input: {input_text}
+
+    Extracted name:
+    """
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant that extracts names from text."},
+        {"role": "user", "content": prompt}
+    ]
+    extracted_name = chat_with_gpt(messages)
+    return None if extracted_name.strip().lower() == "none" else extracted_name.strip()
+
 def main():
     st.set_page_config(page_title="AI-ASSISTANT FOR IOL EDUCATION", layout="wide")
     
@@ -385,32 +416,40 @@ def main():
             submit_button = st.form_submit_button(label='Send')
 
         if submit_button and user_input:
-            st.session_state.messages.append({"role": "user", "content": user_input})
-            st.session_state.chat_history.append(("user", user_input))
+            # Fix spelling errors
+            corrected_input = fix_spelling(user_input)
+            
+            st.session_state.messages.append({"role": "user", "content": corrected_input})
+            st.session_state.chat_history.append(("user", corrected_input))
             st.session_state.question_count += 1
             
             # Print statement for debugging
             print(f"Question count: {st.session_state.question_count}")
 
             if st.session_state.asked_name and not st.session_state.user_name:
-                st.session_state.user_name = user_input
-                bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
-                st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                st.session_state.chat_history.append(("bot", bot_response))
-                
-                lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
-                st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
-                st.session_state.chat_history.append(("bot", lifestyle_question))
-                
+                extracted_name = extract_name(corrected_input)
+                if extracted_name:
+                    st.session_state.user_name = extracted_name
+                    bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
+                    st.session_state.messages.append({"role": "assistant", "content": bot_response})
+                    st.session_state.chat_history.append(("bot", bot_response))
+                    
+                    lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
+                    st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
+                    st.session_state.chat_history.append(("bot", lifestyle_question))
+                else:
+                    bot_response = "I'm sorry, I didn't catch your name. Could you please tell me your name again?"
+                    st.session_state.messages.append({"role": "assistant", "content": bot_response})
+                    st.session_state.chat_history.append(("bot", bot_response))
             elif not st.session_state.show_lens_options:
-                st.session_state.user_lifestyle = user_input
+                st.session_state.user_lifestyle = corrected_input
                 with st.spinner("Processing your information..."):
-                    bot_response = process_query(user_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+                    bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
                     st.session_state.messages.append({"role": "assistant", "content": bot_response})
                     st.session_state.chat_history.append(("bot", bot_response))
             else:
                 with st.spinner("Processing your question..."):
-                    bot_response = process_query(user_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+                    bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
 
                     if bot_response:
                         st.session_state.messages.append({"role": "assistant", "content": bot_response})
