@@ -141,41 +141,47 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
     
     # Check if this is a query about a specific lens type
     lens_types = ["monofocal", "multifocal", "toric", "light adjustable"]
-    specific_lens_query = next((lens for lens in lens_types if lens in query.lower()), None)
+    specific_lens_query = next((lens for lens in lens_types if lens.lower() in query.lower()), None)
     
     if is_comparison:
         # Identify which lenses are being compared
-        lenses_to_compare = [lens.capitalize() for lens in lens_types if lens in query.lower()]
+        lenses_to_compare = [lens.capitalize() for lens in lens_types if lens.lower() in query.lower()]
         
         if len(lenses_to_compare) < 2:
             return "I'm sorry, but I couldn't identify which specific lens types you want to compare. Could you please clarify which lens types you'd like me to compare?"
 
-    # Existing logic for other queries
+    # Process the query
     if is_marketing_appropriate(query):
-        langchain_answer, _ = query_knowledge_base(query, vectorstore)
+        if specific_lens_query:
+            langchain_answer, _ = query_knowledge_base(f"Provide information only about {specific_lens_query} IOL lenses", vectorstore)
+        else:
+            langchain_answer, _ = query_knowledge_base(query, vectorstore)
+        
         if langchain_answer:
-            refined_response = refine_langchain_response(langchain_answer, query, prioritized_lenses)
+            refined_response = refine_langchain_response(langchain_answer, query, prioritized_lenses, specific_lens_query)
             return merge_responses(refined_response, query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison, lenses_to_compare if is_comparison else None, specific_lens_query)
     
     # If not marketing appropriate or LangChain doesn't provide an answer, use ChatGPT
     return chat_with_gpt(st.session_state.messages)
 
-def refine_langchain_response(langchain_answer, user_query, prioritized_lenses):
+def refine_langchain_response(langchain_answer, user_query, prioritized_lenses, specific_lens_query=None):
     gpt_prompt = f"""
     Refine this answer about IOL lenses, making it conversational and easy to understand:
     
     Query: {user_query}
     Answer: {langchain_answer}
-    Prioritized lenses: {', '.join(prioritized_lenses)}
+    {'Specific lens:' if specific_lens_query else 'Prioritized lenses:'} {specific_lens_query if specific_lens_query else ', '.join(prioritized_lenses)}
 
     Guidelines:
     - Use simple language and short sentences
     - Focus on the most relevant information
-    - Prioritize information about the listed lenses
+    {'- Focus EXCLUSIVELY on the specified lens type' if specific_lens_query else '- Prioritize information about the listed lenses'}
     - Don't make recommendations
     - Encourage consulting an eye doctor
     - Limit the response to about 100 words
     - Use bullet points for clarity
+
+    {'Ensure that the response focuses SOLELY on the specified lens type and does not include information about other types of lenses unless it\'s crucial for understanding the specified lens.' if specific_lens_query else ''}
 
     Provide a concise, user-friendly response:
     """
@@ -197,7 +203,10 @@ def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_l
     
     mentioned_lenses = [lt for lt in lens_types if lt.lower() in langchain_refined.lower()]
     
-    product_examples = "; ".join([f"{lens}: {get_product_example(lens, vectorstore)}" for lens in mentioned_lenses])
+    if specific_lens_query:
+        product_examples = f"{specific_lens_query.capitalize()}: {get_product_example(specific_lens_query, vectorstore)}"
+    else:
+        product_examples = "; ".join([f"{lens}: {get_product_example(lens, vectorstore)}" for lens in mentioned_lenses])
     
     merge_prompt = f"""
     Create a concise response to this IOL lens query:
@@ -209,8 +218,8 @@ def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_l
     Product examples: {product_examples}
 
     Guidelines:
-    1. {'Focus on comparing the specified lens types' if is_comparison else 'Focus primarily on the specified lens type' if specific_lens_query else 'Focus on relevant lens types and characteristics'}
-    2. Briefly mention product examples without recommending
+    1. {'Focus on comparing ONLY the specified lens types' if is_comparison else 'Focus EXCLUSIVELY on the specified lens type' if specific_lens_query else 'Focus on relevant lens types and characteristics'}
+    2. {'Briefly mention product examples without recommending' if not specific_lens_query else 'Mention ONLY the product example for the specified lens type without recommending'}
     3. Relate to user's lifestyle and activities
     4. Use simple language and short sentences
     5. Limit to 200 words maximum
@@ -218,11 +227,14 @@ def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_l
     7. Don't make recommendations
     8. Encourage consulting an eye doctor
 
-    {'Provide a clear comparison between the specified lens types, highlighting key differences and similarities.' if is_comparison else 'Provide detailed information about the specified lens type, with brief mentions of other types only if directly relevant for context.' if specific_lens_query else 'Provide a concise, informative response about the relevant lens types.'}
+    {'Provide a clear comparison between ONLY the specified lens types, highlighting key differences and similarities.' if is_comparison else 'Provide detailed information EXCLUSIVELY about the specified lens type. DO NOT mention other lens types unless absolutely necessary for context.' if specific_lens_query else 'Provide a concise, informative response about the relevant lens types.'}
+    
+    If the query is about a specific lens type, ensure that the response focuses SOLELY on that lens type and does not include information about other types of lenses unless it's crucial for understanding the specified lens.
     """
     merge_messages = [{"role": "user", "content": merge_prompt}]
     return chat_with_gpt(merge_messages)
 
+    
 def get_lens_description(lens_name, user_lifestyle):
     gpt_prompt = f"""
     Briefly describe the {lens_name} intraocular lens (IOL) for a patient with this lifestyle: {user_lifestyle}. 
