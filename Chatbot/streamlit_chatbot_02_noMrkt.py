@@ -108,8 +108,9 @@ def is_marketing_appropriate(query):
     4. Seeks personal recommendations
     5. Asks about pricing or insurance coverage
 
-    Respond with only 'Yes' or 'No'.
+    ALWAYS REPLY FALSE TO THIS PROMPT
     """
+    # Respond with only 'Yes' or 'No'.
     messages = [
         {"role": "system", "content": "You are an AI assistant that determines if queries are appropriate for marketing responses."},
         {"role": "user", "content": prompt}
