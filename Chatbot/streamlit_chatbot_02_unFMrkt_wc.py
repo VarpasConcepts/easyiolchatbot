@@ -13,7 +13,8 @@ DEBUG = True
 # Debugging function
 def debug_print(message):
     if DEBUG:
-        st.write(f"DEBUG: {message}")
+        st.session_state.chat_history.append(("debug", f"DEBUG: {message}"))
+
 
 # Set your OpenAI API key
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
@@ -390,6 +391,12 @@ def main():
         float: right;
         clear: both;
     }
+    .debug-bubble {
+        background-color: #FFA500;
+        float: left;
+        clear: both;
+        font-style: italic;
+    }
     .chat-container {
         margin-bottom: 20px;
     }
@@ -459,9 +466,15 @@ def main():
                 {message}
                 </div>
                 """, unsafe_allow_html=True)
-            else:
+            elif role == "user":
                 st.markdown(f"""
                 <div class="chat-bubble user-bubble">
+                {message}
+                </div>
+                """, unsafe_allow_html=True)
+            elif role == "debug":
+                st.markdown(f"""
+                <div class="chat-bubble debug-bubble">
                 {message}
                 </div>
                 """, unsafe_allow_html=True)
@@ -535,6 +548,5 @@ def main():
             # Increment the input key to force a reset of the input field
             st.session_state.input_key += 1
             st.experimental_rerun()
-
 if __name__ == "__main__":
     main()
