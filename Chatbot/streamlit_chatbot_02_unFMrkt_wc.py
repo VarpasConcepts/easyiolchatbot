@@ -358,60 +358,70 @@ def extract_name(input_text):
 def main():
     st.set_page_config(page_title="AI-ASSISTANT FOR IOL EDUCATION", layout="wide")
     
-    # Set the theme to dark mode and add chat bubble styles
+    # Apply custom CSS
     st.markdown("""
     <style>
+    body {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+    }
+
     .stApp {
-        background-color: #FFFFFF;
-        color: #000000;
+        background-color: #FFFFFF !important;
     }
 
     .stTextInput > div > div > input {
-        background-color: #FFFFFF;
-        color: #000000;
-        border: 1px solid #000000;
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
     }
 
     .stButton > button {
-        background-color: #4CAF50;
-        color: #FFFFFF;
+        background-color: #4CAF50 !important;
+        color: #FFFFFF !important;
     }
 
     .chat-bubble {
-        padding: 10px 15px;
-        border-radius: 20px;
-        margin-bottom: 10px;
-        display: inline-block;
-        max-width: 70%;
-        word-wrap: break-word;
-        color: #000000;
+        padding: 10px 15px !important;
+        border-radius: 20px !important;
+        margin-bottom: 10px !important;
+        display: inline-block !important;
+        max-width: 70% !important;
+        word-wrap: break-word !important;
+        color: #000000 !important;
     }
 
     .bot-bubble {
-        background-color: #D3D3D3;
-        float: left;
-        clear: both;
+        background-color: #D3D3D3 !important;
+        float: left !important;
+        clear: both !important;
     }
 
     .user-bubble {
-        background-color: #87CEFA;
-        float: right;
-        clear: both;
+        background-color: #87CEFA !important;
+        float: right !important;
+        clear: both !important;
     }
 
     .debug-bubble {
-        background-color: #FFB6C1;
-        float: left;
-        clear: both;
-        font-style: italic;
+        background-color: #FFB6C1 !important;
+        float: left !important;
+        clear: both !important;
+        font-style: italic !important;
     }
 
     .chat-container {
-        margin-bottom: 20px;
+        margin-bottom: 20px !important;
     }
 
     /* Ensure all text is black */
     h1, h2, h3, h4, h5, h6, p, span, div {
+        color: #000000 !important;
+    }
+
+    /* Override Streamlit's default dark theme */
+    .stApp, .main, .element-container, .stMarkdown, .stTextInput > div, .stTextInput > div > div > input {
+        background-color: #FFFFFF !important;
         color: #000000 !important;
     }
     </style>
@@ -443,7 +453,6 @@ def main():
     if 'input_key' not in st.session_state:
         st.session_state.input_key = 0
 
-    # Now we can safely use debug_print
     debug_print("Initializing vectorstore")
     vectorstore = load_vectorstore()
 
@@ -562,7 +571,6 @@ def main():
             # Increment the input key to force a reset of the input field
             st.session_state.input_key += 1
             st.experimental_rerun()
-
 
 if __name__ == "__main__":
     main()
