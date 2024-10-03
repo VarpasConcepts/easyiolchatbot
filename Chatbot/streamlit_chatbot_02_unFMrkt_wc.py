@@ -8,7 +8,7 @@ from langchain_openai import OpenAI as LangChainOpenAI
 import time
 
 # Add a debug flag
-DEBUG = False
+DEBUG = True
 
 # Debugging function
 def debug_print(message):
