@@ -356,130 +356,71 @@ def extract_name(input_text):
     return result
 
 def main():
-    st.set_page_config(page_title="AI-ASSISTANT FOR IOL EDUCATION", layout="wide")
+    st.set_page_config(
+        page_title="AI-ASSISTANT FOR IOL EDUCATION",
+        layout="wide",
+        initial_sidebar_state="collapsed",
+        menu_items=None
+    )
     
+    # Set the theme to light mode
+    st.markdown("""
+        <style>
+        :root {
+            --secondary-background-color: #f0f2f6;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     # Apply custom CSS
     st.markdown("""
     <style>
-    body {
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-    }
-
-    .stApp {
-        background-color: #FFFFFF !important;
-    }
-
-    .stTextInput > div > div > input {
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-        border: 1px solid #000000 !important;
-    }
-
-    .stButton > button {
-        background-color: #4CAF50 !important;
-        color: #FFFFFF !important;
-    }
-
     .chat-bubble {
-        padding: 10px 15px !important;
-        border-radius: 20px !important;
-        margin-bottom: 10px !important;
-        display: inline-block !important;
-        max-width: 70% !important;
-        word-wrap: break-word !important;
-        color: #000000 !important;
+        padding: 10px 15px;
+        border-radius: 20px;
+        margin-bottom: 10px;
+        display: inline-block;
+        max-width: 70%;
+        word-wrap: break-word;
     }
 
     .bot-bubble {
-        background-color: #D3D3D3 !important;
-        float: left !important;
-        clear: both !important;
+        background-color: #D3D3D3;
+        float: left;
+        clear: both;
     }
 
     .user-bubble {
-        background-color: #87CEFA !important;
-        float: right !important;
-        clear: both !important;
+        background-color: #87CEFA;
+        float: right;
+        clear: both;
     }
 
     .debug-bubble {
-        background-color: #FFB6C1 !important;
-        float: left !important;
-        clear: both !important;
-        font-style: italic !important;
+        background-color: #FFB6C1;
+        float: left;
+        clear: both;
+        font-style: italic;
     }
 
     .chat-container {
-        margin-bottom: 20px !important;
+        margin-bottom: 20px;
     }
 
-    /* Ensure all text is black */
-    h1, h2, h3, h4, h5, h6, p, span, div {
-        color: #000000 !important;
-    }
-
-    /* Override Streamlit's default dark theme */
-    .stApp, .main, .element-container, .stMarkdown, .stTextInput > div, .stTextInput > div > div > input {
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-    }
-
-    /* More specific file uploader styles */
+    /* Ensure file uploader uses light theme */
     .stFileUploader {
-        background-color: #FFFFFF !important;
-    }
-
-    .stFileUploader > div {
-        background-color: #FFFFFF !important;
-    }
-
-    .stFileUploader > div > div {
-        background-color: #FFFFFF !important;
+        background-color: var(--secondary-background-color);
     }
 
     .stFileUploader [data-testid="stFileUploadDropzone"] {
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-        border: 2px dashed #CCCCCC !important;
-        border-radius: 5px !important;
+        background-color: white;
+        border: 2px dashed #CCCCCC;
+        border-radius: 5px;
     }
 
     .stFileUploader [data-testid="stFileUploadDropzone"] button {
-        background-color: #4CAF50 !important;
-        color: #FFFFFF !important;
-        border: none !important;
-    }
-
-    .stFileUploader [data-testid="stFileUploadDropzone"] p {
-        color: #000000 !important;
-    }
-
-    /* Ensure text color is black for all elements within file uploader */
-    .stFileUploader *, .stFileUploader div, .stFileUploader span, .stFileUploader p {
-        color: #000000 !important;
-    }
-
-    /* Override any remaining dark mode styles */
-    .stApp [data-testid="stAppViewContainer"] {
-        background-color: #FFFFFF !important;
-    }
-
-    .stApp [data-testid="stHeader"] {
-        background-color: #FFFFFF !important;
-    }
-
-    .stApp [data-testid="stToolbar"] {
-        background-color: #FFFFFF !important;
-    }
-
-    .stApp [data-testid="stDecoration"] {
-        background-color: #FFFFFF !important;
-    }
-
-    .stApp [data-testid="stStatusWidget"] {
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
+        background-color: #4CAF50;
+        color: white;
     }
     </style>
     """, unsafe_allow_html=True)
