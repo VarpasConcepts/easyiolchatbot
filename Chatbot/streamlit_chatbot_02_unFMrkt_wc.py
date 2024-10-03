@@ -8,7 +8,7 @@ from langchain_openai import OpenAI as LangChainOpenAI
 import time
 
 # Add a debug flag
-DEBUG = True
+DEBUG = False
 
 # Debugging function
 def debug_print(message):
@@ -549,6 +549,6 @@ def main():
             st.session_state.input_key += 1
             st.experimental_rerun()
 
-            
+
 if __name__ == "__main__":
     main()
