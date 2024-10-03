@@ -7,6 +7,14 @@ from langchain.chains import RetrievalQA
 from langchain_openai import OpenAI as LangChainOpenAI
 import time
 
+# Add a debug flag
+DEBUG = True
+
+# Debugging function
+def debug_print(message):
+    if DEBUG:
+        st.write(f"DEBUG: {message}")
+
 # Set your OpenAI API key
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
@@ -18,17 +26,23 @@ storage_directory = "faiss_index"
 
 @st.cache_resource
 def load_vectorstore():
+    debug_print("Entering load_vectorstore()")
     embeddings = OpenAIEmbeddings()
     try:
         index_path = os.path.join(os.path.dirname(__file__), storage_directory)
-        return FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
+        vectorstore = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
+        debug_print("Vectorstore loaded successfully")
+        return vectorstore
     except Exception as e:
         st.error(f"Error loading index: {e}")
         st.error("The FAISS index file is missing or cannot be accessed. Please check the file path and permissions.")
+        debug_print(f"Error in load_vectorstore(): {e}")
         return None
 
 def query_knowledge_base(query, vectorstore):
+    debug_print(f"Entering query_knowledge_base() with query: {query}")
     if vectorstore is None:
+        debug_print("Vectorstore is None, returning None, None")
         return None, None
 
     retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
@@ -42,12 +56,15 @@ def query_knowledge_base(query, vectorstore):
 
     try:
         result = qa_chain({"query": query})
+        debug_print("Query successful, returning result")
         return result["result"], result["source_documents"]
     except Exception as e:
         st.error(f"Error querying knowledge base: {e}")
+        debug_print(f"Error in query_knowledge_base(): {e}")
         return None, None
 
 def chat_with_gpt(messages):
+    debug_print(f"Entering chat_with_gpt() with {len(messages)} messages")
     try:
         # Add a system message to encourage concise responses
         system_message = {
@@ -60,17 +77,19 @@ def chat_with_gpt(messages):
         
         response = client.chat.completions.create(
             model="gpt-4-turbo",
-            # model = "gpt-4o-realtime-preview",
             messages=messages,
             temperature=0.7  # Slightly increase randomness to encourage varied, concise responses
         )
         time.sleep(1)  # Add delay to prevent hitting rate limits
+        debug_print("ChatGPT response received successfully")
         return response.choices[0].message.content
     except Exception as e:
         st.error(f"Error generating ChatGPT response: {e}")
+        debug_print(f"Error in chat_with_gpt(): {e}")
         return None
 
 def is_marketing_appropriate(query):
+    debug_print(f"Entering is_marketing_appropriate() with query: {query}")
     prompt = f"""
     Determine if the following query about IOL lenses is appropriate for a marketing-focused response:
 
@@ -96,9 +115,11 @@ def is_marketing_appropriate(query):
         {"role": "user", "content": prompt}
     ]
     response = chat_with_gpt(messages)
+    debug_print(f"is_marketing_appropriate() returning: {response.strip().lower() == 'yes'}")
     return response.strip().lower() == 'yes'
 
 def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
+    debug_print(f"Entering process_query() with query: {query}")
     # Check if this is the first response after user shares their lifestyle
     if not st.session_state.show_lens_options:
         st.session_state.show_lens_options = True
@@ -115,6 +136,7 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         response = f"{st.session_state.doctor_name} has suggested the following lenses for you. I'd be happy to explain how each of these options might fit into your lifestyle. Please feel free to ask any questions you might have about these lenses - I'm here to help!\n\n"
         response += "\n\n".join(lens_descriptions)
         response += "\n\nIs there a particular lens you'd like to know more about?"
+        debug_print("Returning initial lens options response")
         return response
 
     # Check if the query is about doctor's lens suggestions
@@ -132,6 +154,7 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         response = f"Dr. {st.session_state.doctor_name} has thoughtfully suggested the following lenses for you. I'd be happy to explain how each of these options might fit into your lifestyle. Please feel free to ask any questions you might have about these lenses - I'm here to help!\n\n"
         response += "\n\n".join(lens_descriptions)
         response += "\n\nPlease remember, these suggestions are tailored to your unique needs. If you have any specific questions about these lenses, don't hesitate to ask!"
+        debug_print("Returning doctor's lens suggestions response")
         return response
 
     # Check if this is a comparison query
@@ -147,6 +170,7 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         lenses_to_compare = [lens.capitalize() for lens in lens_types if lens.lower() in query.lower()]
         
         if len(lenses_to_compare) < 2:
+            debug_print("Insufficient lenses for comparison")
             return "I'm sorry, but I couldn't identify which specific lens types you want to compare. Could you please clarify which lens types you'd like me to compare?"
 
     # Process the query
@@ -158,12 +182,15 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         
         if langchain_answer:
             refined_response = refine_langchain_response(langchain_answer, query, prioritized_lenses, specific_lens_query)
+            debug_print("Returning merged response")
             return merge_responses(refined_response, query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison, lenses_to_compare if is_comparison else None, specific_lens_query)
     
     # If not marketing appropriate or LangChain doesn't provide an answer, use ChatGPT
+    debug_print("Using ChatGPT for response")
     return chat_with_gpt(st.session_state.messages)
 
 def refine_langchain_response(langchain_answer, user_query, prioritized_lenses, specific_lens_query=None):
+    debug_print(f"Entering refine_langchain_response() with query: {user_query}")
     gpt_prompt = f"""
     Refine this answer about IOL lenses, making it conversational and easy to understand:
     
@@ -185,14 +212,19 @@ def refine_langchain_response(langchain_answer, user_query, prioritized_lenses, 
     Provide a concise, user-friendly response:
     """
     gpt_messages = [{"role": "user", "content": gpt_prompt}]
-    return chat_with_gpt(gpt_messages)
+    refined_response = chat_with_gpt(gpt_messages)
+    debug_print("Langchain response refined")
+    return refined_response
 
 def get_product_example(lens_type, vectorstore):
+    debug_print(f"Entering get_product_example() for lens type: {lens_type}")
     query = f"Briefly name an example of a {lens_type} IOL product without recommending it. Use 10 words or less."
     result, _ = query_knowledge_base(query, vectorstore)
+    debug_print(f"Product example retrieved: {result}")
     return result if result else ""
 
 def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison=False, lenses_to_compare=None, specific_lens_query=None):
+    debug_print(f"Entering merge_responses() with query: {user_query}")
     if is_comparison and lenses_to_compare:
         lens_types = lenses_to_compare
     elif specific_lens_query:
@@ -231,9 +263,12 @@ def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_l
     If the query is about a specific lens type, ensure that the response focuses SOLELY on that lens type and does not include information about other types of lenses unless it's crucial for understanding the specified lens.
     """
     merge_messages = [{"role": "user", "content": merge_prompt}]
-    return chat_with_gpt(merge_messages)
+    merged_response = chat_with_gpt(merge_messages)
+    debug_print("Responses merged successfully")
+    return merged_response
 
 def get_lens_description(lens_name, user_lifestyle):
+    debug_print(f"Entering get_lens_description() for lens: {lens_name}")
     gpt_prompt = f"""
     Briefly describe the {lens_name} intraocular lens (IOL) for a patient with this lifestyle: {user_lifestyle}. 
     
@@ -247,25 +282,33 @@ def get_lens_description(lens_name, user_lifestyle):
     Provide a short description:
     """
     gpt_messages = [{"role": "user", "content": gpt_prompt}]
-    return chat_with_gpt(gpt_messages)
+    description = chat_with_gpt(gpt_messages)
+    debug_print(f"Lens description generated for {lens_name}")
+    return description
 
 def read_file(file):
+    debug_print("Entering read_file()")
     try:
         content = file.getvalue().decode("utf-8")
         data = content.splitlines()
         if len(data) < 2:
             st.error("The uploaded file does not contain enough information.")
+            debug_print("File does not contain enough information")
             return None, None
         doctor_name = data[0].split(':')[1].strip()
         lenses = data[1].split(':')[1].strip().split(',')
+        debug_print(f"File read successfully. Doctor: {doctor_name}, Lenses: {lenses}")
         return doctor_name, [lens.strip() for lens in lenses]
     except Exception as e:
         st.error(f"Error reading file: {e}")
+        debug_print(f"Error in read_file(): {e}")
         return None, None
 
 def fix_spelling(query):
+    debug_print(f"Entering fix_spelling() with query: {query}")
     # If the query is longer than a certain threshold, skip spell-checking
     if len(query) > 100:
+        debug_print("Query too long, skipping spell-check")
         return query
 
     prompt = f"""
@@ -286,11 +329,14 @@ def fix_spelling(query):
     
     # If the corrected query is significantly different, return the original
     if len(corrected_query) != len(query) and abs(len(corrected_query) - len(query)) > 5:
+        debug_print("Significant difference in corrected query, returning original")
         return query
     
+    debug_print(f"Spell-check complete. Corrected query: {corrected_query}")
     return corrected_query.strip()
 
 def extract_name(input_text):
+    debug_print(f"Entering extract_name() with input: {input_text}")
     prompt = f"""
     Please extract the name from the following input. If there's no clear name, respond with "None".
     Only provide the extracted name or "None", nothing else.
@@ -304,7 +350,9 @@ def extract_name(input_text):
         {"role": "user", "content": prompt}
     ]
     extracted_name = chat_with_gpt(messages)
-    return None if extracted_name.strip().lower() == "none" else extracted_name.strip()
+    result = None if extracted_name.strip().lower() == "none" else extracted_name.strip()
+    debug_print(f"Extracted name: {result}")
+    return result
 
 def main():
     st.set_page_config(page_title="AI-ASSISTANT FOR IOL EDUCATION", layout="wide")
@@ -350,6 +398,7 @@ def main():
     
     st.title("AI-Assistant for IOL Education")
 
+    debug_print("Initializing vectorstore")
     vectorstore = load_vectorstore()
 
     if 'messages' not in st.session_state:
@@ -376,6 +425,7 @@ def main():
     uploaded_file = st.file_uploader("Please upload the file your surgeon has provided you", type=["txt"])
 
     if uploaded_file is not None and not st.session_state.greeted:
+        debug_print("File uploaded, processing")
         doctor_name, prioritized_lenses = read_file(uploaded_file)
         if doctor_name and prioritized_lenses:
             st.session_state.doctor_name = doctor_name
@@ -394,8 +444,10 @@ def main():
             ]
             st.session_state.greeted = True
             st.session_state.asked_name = True
+            debug_print("Greeting and name request set")
         else:
             st.error("Unable to process the uploaded file. Please check the file format.")
+            debug_print("Error processing uploaded file")
 
     # Chat bubble display
     chat_container = st.container()
@@ -428,16 +480,17 @@ def main():
             submit_button = st.form_submit_button(label='Send')
 
         if submit_button and user_input:
+            debug_print(f"Processing user input: {user_input}")
             with st.spinner("Processing your input..."):
                 # Apply spell-checking in the background
                 corrected_input = fix_spelling(user_input)
+                debug_print(f"Corrected input: {corrected_input}")
                 
                 st.session_state.messages.append({"role": "user", "content": corrected_input})
                 st.session_state.chat_history.append(("user", corrected_input))
                 st.session_state.question_count += 1
                 
-                # Print statement for debugging
-                print(f"Question count: {st.session_state.question_count}")
+                debug_print(f"Question count: {st.session_state.question_count}")
 
                 if st.session_state.asked_name and not st.session_state.user_name:
                     extracted_name = extract_name(corrected_input)
@@ -450,15 +503,18 @@ def main():
                         lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
                         st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
                         st.session_state.chat_history.append(("bot", lifestyle_question))
+                        debug_print(f"User name set: {st.session_state.user_name}")
                     else:
                         bot_response = "I'm sorry, I didn't catch your name. Could you please tell me your name again?"
                         st.session_state.messages.append({"role": "assistant", "content": bot_response})
                         st.session_state.chat_history.append(("bot", bot_response))
+                        debug_print("Failed to extract user name")
                 elif not st.session_state.show_lens_options:
                     st.session_state.user_lifestyle = corrected_input
                     bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
                     st.session_state.messages.append({"role": "assistant", "content": bot_response})
                     st.session_state.chat_history.append(("bot", bot_response))
+                    debug_print("Processed initial lifestyle query")
                 else:
                     bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
 
@@ -471,11 +527,10 @@ def main():
                             follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
                             st.session_state.messages.append({"role": "assistant", "content": follow_up})
                             st.session_state.chat_history.append(("bot", follow_up))
-                            
-                            # Print statement for debugging
-                            print(f"Follow-up prompt added to chat history (Question {st.session_state.question_count})")
+                            debug_print(f"Follow-up prompt added to chat history (Question {st.session_state.question_count})")
                     else:
                         st.error("Sorry, I couldn't generate a response. Please try again.")
+                        debug_print("Failed to generate bot response")
 
             # Increment the input key to force a reset of the input field
             st.session_state.input_key += 1
