@@ -422,7 +422,7 @@ def main():
             # Create a placeholder for the spinner and timer
             spinner_placeholder = st.empty()
             
-            with spinner_placeholder:
+            with spinner_placeholder.container():
                 with st.spinner("Processing your input..."):
                     # Fix spelling errors
                     corrected_input = fix_spelling(user_input)
@@ -472,11 +472,9 @@ def main():
                         else:
                             st.error("Sorry, I couldn't generate a response. Please try again.")
 
-                    # Calculate processing time
-                    processing_time = time.time() - start_time
-                    
-                    # Update the spinner placeholder with the processing time
-                    spinner_placeholder.text(f"Processing time: {processing_time:.2f} seconds")
+                # Calculate and display processing time
+                processing_time = time.time() - start_time
+                st.write(f"Processing time: {processing_time:.2f} seconds")
 
             # Increment the input key to force a reset of the input field
             st.session_state.input_key += 1
