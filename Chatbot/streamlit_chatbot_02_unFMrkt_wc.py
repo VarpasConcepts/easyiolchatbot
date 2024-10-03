@@ -405,9 +405,7 @@ def main():
     
     st.title("AI-Assistant for IOL Education")
 
-    debug_print("Initializing vectorstore")
-    vectorstore = load_vectorstore()
-
+    # Initialize session state variables
     if 'messages' not in st.session_state:
         st.session_state.messages = []
     if 'chat_history' not in st.session_state:
@@ -428,6 +426,12 @@ def main():
         st.session_state.user_name = ""
     if 'question_count' not in st.session_state:
         st.session_state.question_count = 0
+    if 'input_key' not in st.session_state:
+        st.session_state.input_key = 0
+
+    # Now we can safely use debug_print
+    debug_print("Initializing vectorstore")
+    vectorstore = load_vectorstore()
 
     uploaded_file = st.file_uploader("Please upload the file your surgeon has provided you", type=["txt"])
 
@@ -483,10 +487,6 @@ def main():
         st.markdown("<div style='margin-bottom: 100px;'></div>", unsafe_allow_html=True)
 
     if st.session_state.greeted:
-        # Initialize the input key in session state if it doesn't exist
-        if 'input_key' not in st.session_state:
-            st.session_state.input_key = 0
-
         with st.form(key='message_form'):
             # Use a unique key for the text input field
             user_input = st.text_input("You:", key=f"user_input_{st.session_state.input_key}")
@@ -548,5 +548,6 @@ def main():
             # Increment the input key to force a reset of the input field
             st.session_state.input_key += 1
             st.experimental_rerun()
+
 if __name__ == "__main__":
     main()
