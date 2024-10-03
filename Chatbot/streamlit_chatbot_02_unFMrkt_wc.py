@@ -362,17 +362,21 @@ def main():
     st.markdown("""
     <style>
     .stApp {
-        background-color: #0E1117;
-        color: #FAFAFA;
+        background-color: #FFFFFF;
+        color: #000000;
     }
+
     .stTextInput > div > div > input {
-        background-color: #262730;
-        color: #FAFAFA;
+        background-color: #FFFFFF;
+        color: #000000;
+        border: 1px solid #000000;
     }
+
     .stButton > button {
         background-color: #4CAF50;
         color: #FFFFFF;
     }
+
     .chat-bubble {
         padding: 10px 15px;
         border-radius: 20px;
@@ -380,25 +384,35 @@ def main():
         display: inline-block;
         max-width: 70%;
         word-wrap: break-word;
+        color: #000000;
     }
+
     .bot-bubble {
-        background-color: #2C3E50;
+        background-color: #D3D3D3;
         float: left;
         clear: both;
     }
+
     .user-bubble {
-        background-color: #4CAF50;
+        background-color: #87CEFA;
         float: right;
         clear: both;
     }
+
     .debug-bubble {
-        background-color: #FFA500;
+        background-color: #FFB6C1;
         float: left;
         clear: both;
         font-style: italic;
     }
+
     .chat-container {
         margin-bottom: 20px;
+    }
+
+    /* Ensure all text is black */
+    h1, h2, h3, h4, h5, h6, p, span, div {
+        color: #000000 !important;
     }
     </style>
     """, unsafe_allow_html=True)
