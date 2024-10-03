@@ -264,18 +264,30 @@ def read_file(file):
         return None, None
 
 def fix_spelling(query):
-    prompt = f"""
-    Please fix any spelling errors in the following text, but do not make any other changes:
+    # If the query is longer than a certain threshold, skip spell-checking
+    if len(query) > 100:
+        return query
 
-    {query}
+    prompt = f"""
+    Please carefully review the following text for spelling errors only. Do not make any other changes.
+    If there are no spelling errors, return the original text exactly as is.
+    If there are spelling errors, correct them and return the corrected text.
+    Do not add any explanations or comments.
+
+    Text to review: {query}
 
     Corrected text:
     """
     messages = [
-        {"role": "system", "content": "You are a helpful assistant that corrects spelling errors."},
+        {"role": "system", "content": "You are a helpful assistant that corrects spelling errors without changing the meaning or intent of the text."},
         {"role": "user", "content": prompt}
     ]
     corrected_query = chat_with_gpt(messages)
+    
+    # If the corrected query is significantly different, return the original
+    if len(corrected_query) != len(query) and abs(len(corrected_query) - len(query)) > 5:
+        return query
+    
     return corrected_query.strip()
 
 def extract_name(input_text):
@@ -419,62 +431,76 @@ def main():
             # Start the timer
             start_time = time.time()
             
-            # Create a placeholder for the spinner and timer
-            spinner_placeholder = st.empty()
+            # Create two columns: one for spinner, one for timer
+            col1, col2 = st.columns([3, 1])
             
-            with spinner_placeholder.container():
-                with st.spinner("Processing your input..."):
-                    # Fix spelling errors
-                    corrected_input = fix_spelling(user_input)
-                    
-                    st.session_state.messages.append({"role": "user", "content": corrected_input})
-                    st.session_state.chat_history.append(("user", corrected_input))
-                    st.session_state.question_count += 1
-                    
-                    # Print statement for debugging
-                    print(f"Question count: {st.session_state.question_count}")
+            with col1:
+                spinner_placeholder = st.empty()
+            with col2:
+                timer_placeholder = st.empty()
+            
+            while True:
+                with spinner_placeholder:
+                    st.spinner("Processing your input...")
+                with timer_placeholder:
+                    processing_time = time.time() - start_time
+                    st.write(f"Time: {processing_time:.2f}s")
+                
+                # Apply spell-checking
+                corrected_input = fix_spelling(user_input)
+                
+                # If spell-checking made changes, inform the user
+                if corrected_input != user_input:
+                    st.info(f"Your input was spell-checked. Original: '{user_input}', Corrected: '{corrected_input}'")
+                    st.write("If this correction is incorrect, please let me know, and I'll use your original input.")
+                
+                st.session_state.messages.append({"role": "user", "content": corrected_input})
+                st.session_state.chat_history.append(("user", corrected_input))
+                st.session_state.question_count += 1
+                
+                # Print statement for debugging
+                print(f"Question count: {st.session_state.question_count}")
 
-                    if st.session_state.asked_name and not st.session_state.user_name:
-                        extracted_name = extract_name(corrected_input)
-                        if extracted_name:
-                            st.session_state.user_name = extracted_name
-                            bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
-                            st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                            st.session_state.chat_history.append(("bot", bot_response))
-                            
-                            lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
-                            st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
-                            st.session_state.chat_history.append(("bot", lifestyle_question))
-                        else:
-                            bot_response = "I'm sorry, I didn't catch your name. Could you please tell me your name again?"
-                            st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                            st.session_state.chat_history.append(("bot", bot_response))
-                    elif not st.session_state.show_lens_options:
-                        st.session_state.user_lifestyle = corrected_input
-                        bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+                if st.session_state.asked_name and not st.session_state.user_name:
+                    extracted_name = extract_name(corrected_input)
+                    if extracted_name:
+                        st.session_state.user_name = extracted_name
+                        bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
                         st.session_state.messages.append({"role": "assistant", "content": bot_response})
                         st.session_state.chat_history.append(("bot", bot_response))
+                        
+                        lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
+                        st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
+                        st.session_state.chat_history.append(("bot", lifestyle_question))
                     else:
-                        bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+                        bot_response = "I'm sorry, I didn't catch your name. Could you please tell me your name again?"
+                        st.session_state.messages.append({"role": "assistant", "content": bot_response})
+                        st.session_state.chat_history.append(("bot", bot_response))
+                elif not st.session_state.show_lens_options:
+                    st.session_state.user_lifestyle = corrected_input
+                    bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+                    st.session_state.messages.append({"role": "assistant", "content": bot_response})
+                    st.session_state.chat_history.append(("bot", bot_response))
+                else:
+                    bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
 
-                        if bot_response:
-                            st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                            st.session_state.chat_history.append(("bot", bot_response))
+                    if bot_response:
+                        st.session_state.messages.append({"role": "assistant", "content": bot_response})
+                        st.session_state.chat_history.append(("bot", bot_response))
 
-                            # Check if it's time to display the follow-up prompt (5th question and every odd question after)
-                            if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
-                                follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
-                                st.session_state.messages.append({"role": "assistant", "content": follow_up})
-                                st.session_state.chat_history.append(("bot", follow_up))
-                                
-                                # Print statement for debugging
-                                print(f"Follow-up prompt added to chat history (Question {st.session_state.question_count})")
-                        else:
-                            st.error("Sorry, I couldn't generate a response. Please try again.")
-
-                # Calculate and display processing time
-                processing_time = time.time() - start_time
-                st.write(f"Processing time: {processing_time:.2f} seconds")
+                        # Check if it's time to display the follow-up prompt (5th question and every odd question after)
+                        if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
+                            follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
+                            st.session_state.messages.append({"role": "assistant", "content": follow_up})
+                            st.session_state.chat_history.append(("bot", follow_up))
+                            
+                            # Print statement for debugging
+                            print(f"Follow-up prompt added to chat history (Question {st.session_state.question_count})")
+                    else:
+                        st.error("Sorry, I couldn't generate a response. Please try again.")
+                
+                # Break the loop when processing is done
+                break
 
             # Increment the input key to force a reset of the input field
             st.session_state.input_key += 1
