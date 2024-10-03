@@ -424,6 +424,39 @@ def main():
         background-color: #FFFFFF !important;
         color: #000000 !important;
     }
+
+    /* File uploader styles */
+    .stFileUploader {
+        background-color: #FFFFFF !important;
+        border: 2px dashed #CCCCCC !important;
+        border-radius: 5px !important;
+        padding: 20px !important;
+    }
+
+    .stFileUploader > div > div {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+    }
+
+    .stFileUploader > div > div > div {
+        color: #000000 !important;
+    }
+
+    .stFileUploader [data-testid="stFileUploadDropzone"] {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+    }
+
+    .stFileUploader [data-testid="stFileUploadDropzone"] button {
+        background-color: #4CAF50 !important;
+        color: #FFFFFF !important;
+        border: none !important;
+    }
+
+    /* Ensure text color is black for all elements */
+    .stFileUploader *, .stFileUploader div, .stFileUploader span, .stFileUploader p {
+        color: #000000 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
     
