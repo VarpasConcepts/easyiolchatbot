@@ -59,9 +59,9 @@ def chat_with_gpt(messages):
         messages.insert(0, system_message)
         
         response = client.chat.completions.create(
-            model="gpt-4-turbo",
+            # model="gpt-4-turbo",
+            model = "gpt-4o-realtime-preview",
             messages=messages,
-            max_tokens=300,  # This is a soft limit, approximately 225 words
             temperature=0.7  # Slightly increase randomness to encourage varied, concise responses
         )
         time.sleep(1)  # Add delay to prevent hitting rate limits
