@@ -425,26 +425,24 @@ def main():
         color: #000000 !important;
     }
 
-    /* File uploader styles */
+    /* More specific file uploader styles */
     .stFileUploader {
         background-color: #FFFFFF !important;
-        border: 2px dashed #CCCCCC !important;
-        border-radius: 5px !important;
-        padding: 20px !important;
+    }
+
+    .stFileUploader > div {
+        background-color: #FFFFFF !important;
     }
 
     .stFileUploader > div > div {
         background-color: #FFFFFF !important;
-        color: #000000 !important;
-    }
-
-    .stFileUploader > div > div > div {
-        color: #000000 !important;
     }
 
     .stFileUploader [data-testid="stFileUploadDropzone"] {
         background-color: #FFFFFF !important;
         color: #000000 !important;
+        border: 2px dashed #CCCCCC !important;
+        border-radius: 5px !important;
     }
 
     .stFileUploader [data-testid="stFileUploadDropzone"] button {
@@ -453,8 +451,34 @@ def main():
         border: none !important;
     }
 
-    /* Ensure text color is black for all elements */
+    .stFileUploader [data-testid="stFileUploadDropzone"] p {
+        color: #000000 !important;
+    }
+
+    /* Ensure text color is black for all elements within file uploader */
     .stFileUploader *, .stFileUploader div, .stFileUploader span, .stFileUploader p {
+        color: #000000 !important;
+    }
+
+    /* Override any remaining dark mode styles */
+    .stApp [data-testid="stAppViewContainer"] {
+        background-color: #FFFFFF !important;
+    }
+
+    .stApp [data-testid="stHeader"] {
+        background-color: #FFFFFF !important;
+    }
+
+    .stApp [data-testid="stToolbar"] {
+        background-color: #FFFFFF !important;
+    }
+
+    .stApp [data-testid="stDecoration"] {
+        background-color: #FFFFFF !important;
+    }
+
+    .stApp [data-testid="stStatusWidget"] {
+        background-color: #FFFFFF !important;
         color: #000000 !important;
     }
     </style>
