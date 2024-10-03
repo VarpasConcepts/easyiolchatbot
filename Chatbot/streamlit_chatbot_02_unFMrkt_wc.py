@@ -428,31 +428,9 @@ def main():
             submit_button = st.form_submit_button(label='Send')
 
         if submit_button and user_input:
-            # Start the timer
-            start_time = time.time()
-            
-            # Create two columns: one for spinner, one for timer
-            col1, col2 = st.columns([3, 1])
-            
-            with col1:
-                spinner_placeholder = st.empty()
-            with col2:
-                timer_placeholder = st.empty()
-            
-            while True:
-                with spinner_placeholder:
-                    st.spinner("Processing your input...")
-                with timer_placeholder:
-                    processing_time = time.time() - start_time
-                    st.write(f"Time: {processing_time:.2f}s")
-                
-                # Apply spell-checking
+            with st.spinner("Processing your input..."):
+                # Apply spell-checking in the background
                 corrected_input = fix_spelling(user_input)
-                
-                # If spell-checking made changes, inform the user
-                if corrected_input != user_input:
-                    st.info(f"Your input was spell-checked. Original: '{user_input}', Corrected: '{corrected_input}'")
-                    st.write("If this correction is incorrect, please let me know, and I'll use your original input.")
                 
                 st.session_state.messages.append({"role": "user", "content": corrected_input})
                 st.session_state.chat_history.append(("user", corrected_input))
@@ -498,9 +476,6 @@ def main():
                             print(f"Follow-up prompt added to chat history (Question {st.session_state.question_count})")
                     else:
                         st.error("Sorry, I couldn't generate a response. Please try again.")
-                
-                # Break the loop when processing is done
-                break
 
             # Increment the input key to force a reset of the input field
             st.session_state.input_key += 1
