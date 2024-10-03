@@ -490,13 +490,16 @@ def main():
     if st.session_state.greeted:
         if st.session_state.asked_name and not st.session_state.user_name:
             # Display two input fields for first name and last name
-            col1, col2 = st.columns(2)
-            with col1:
-                first_name = st.text_input("First Name:")
-            with col2:
-                last_name = st.text_input("Last Name:")
-            
-            if st.button("Submit"):
+            with st.form(key='name_form'):
+                col1, col2 = st.columns(2)
+                with col1:
+                    first_name = st.text_input("First Name:", key="first_name")
+                with col2:
+                    last_name = st.text_input("Last Name:", key="last_name")
+                
+                submit_button = st.form_submit_button("Submit")
+
+            if submit_button or (first_name and last_name):  # This allows both button click and Enter key to submit
                 if first_name and last_name:
                     st.session_state.user_name = f"{first_name} {last_name}"
                     bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
@@ -508,6 +511,7 @@ def main():
                     st.session_state.chat_history.append(("bot", lifestyle_question))
                     debug_print(f"User name set: {st.session_state.user_name}")
                     st.session_state.asked_name = False
+                    st.experimental_rerun()  # Force a rerun to update the UI
                 else:
                     st.warning("Please enter both your first and last name.")
         else:
