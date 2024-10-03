@@ -502,6 +502,11 @@ def main():
             if submit_button or (first_name and last_name):  # This allows both button click and Enter key to submit
                 if first_name and last_name:
                     st.session_state.user_name = f"{first_name} {last_name}"
+                    
+                    # Add the user's name to the chat history
+                    st.session_state.messages.append({"role": "user", "content": st.session_state.user_name})
+                    st.session_state.chat_history.append(("user", st.session_state.user_name))
+                    
                     bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
                     st.session_state.messages.append({"role": "assistant", "content": bot_response})
                     st.session_state.chat_history.append(("bot", bot_response))
@@ -509,7 +514,7 @@ def main():
                     lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
                     st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
                     st.session_state.chat_history.append(("bot", lifestyle_question))
-                    debug_print(f"User name set: {st.session_state.user_name}")
+                    debug_print(f"User name set and added to chat history: {st.session_state.user_name}")
                     st.session_state.asked_name = False
                     st.experimental_rerun()  # Force a rerun to update the UI
                 else:
