@@ -419,6 +419,7 @@ def get_binary_file_downloader_html(bin_file, file_label='File'):
 
 def main():
     st.set_page_config(
+        page_title="EasyIOLChat",
         layout="wide",
         initial_sidebar_state="collapsed",
         menu_items=None
@@ -519,7 +520,6 @@ def main():
         st.button("About EasyIOL")
         st.button("Contact Us")
 
-    st.title("AI-Assistant for IOL Education - Non Marketing")
 
     # Initialize session state variables
     if 'messages' not in st.session_state:
