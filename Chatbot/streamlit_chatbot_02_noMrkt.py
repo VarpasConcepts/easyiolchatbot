@@ -153,7 +153,7 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         return response
 
     # Check if the query is about doctor's lens suggestions
-    if any(keyword in query.lower() for keyword in ["what lenses", "which lenses", "doctor suggest", "doctor recommend", "surgeon suggest", "surgeon recommend","clinic suggest", "clinic advise","clinic recomendation"]):
+    if any(keyword in query.lower() for keyword in ["what lenses", "which lenses", "doctor suggest", "doctor recommend", "surgeon suggest", "surgeon recommend","clinic suggest", "clinic advise","clinic recomendation", "gave me"]):
         lens_descriptions = []
         
         # Ensure monofocal lens is always first
