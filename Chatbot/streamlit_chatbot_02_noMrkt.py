@@ -500,6 +500,10 @@ def main():
     }
     </style>
     """, unsafe_allow_html=True)
+
+    with st.sidebar:
+        st.header("IOL Education Resources")
+        st.write("Welcome to our IOLs")
     
     st.title("AI-Assistant for IOL Education - Non Marketing")
 
