@@ -445,15 +445,6 @@ def main():
         .sidebar .sidebar-content .block-container {
             padding-top: 5rem;
         }
-        .sidebar .sidebar-content .stButton>button {
-            background-color: transparent;
-            color: white;
-            border: 1px solid white;
-            border-radius: 20px;
-            padding: 10px 15px;
-            width: 100%;
-            margin-bottom: 10px;
-        }
         .chat-bubble {
             padding: 10px 15px;
             border-radius: 20px;
@@ -480,9 +471,6 @@ def main():
         }
         .chat-container {
             margin-bottom: 20px;
-        }
-        .stFileUploader {
-            background-color: var(--secondary-background-color);
         }
         }
         .stFileUploader [data-testid="stFileUploadDropzone"] button {
