@@ -421,7 +421,7 @@ def main():
     st.set_page_config(
         page_title="EasyIOLChat",
         layout="wide",
-        initial_sidebar_state="collapsed",
+        initial_sidebar_state="expanded",
         menu_items=None
     )
     
