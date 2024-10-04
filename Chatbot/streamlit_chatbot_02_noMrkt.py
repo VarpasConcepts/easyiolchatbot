@@ -477,6 +477,7 @@ def main():
         }
         }
         .stFileUploader [data-testid="stFileUploadDropzone"] button {
+            padding = 0;
             background-color: #000000;
             color: white;
         }
