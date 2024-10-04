@@ -503,6 +503,8 @@ def main():
         st.empty()
         st.sidebar.image("./easyiol.png", use_column_width=True)
         st.empty()
+        st.empty()
+        st.empty()
         st.write("Please upload the the prescription that was provided by your doctor")
 
 
