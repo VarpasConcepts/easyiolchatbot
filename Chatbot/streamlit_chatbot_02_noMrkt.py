@@ -432,7 +432,9 @@ def main():
             :root {
                 --secondary-background-color: #f0f2f6;
             }
-
+            [data-testid="stSidebar"] [data-testid="stSidebarNav"] button[kind="header"] {
+                 color: white !important;
+            }
             /* Sidebar styling */
             [data-testid=stSidebar] {
                 width: 350px;
