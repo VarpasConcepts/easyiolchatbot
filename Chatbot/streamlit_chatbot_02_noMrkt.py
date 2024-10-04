@@ -436,6 +436,9 @@ def main():
             background-color: #092247;
         }
         .sidebar .sidebar-content {
+            color: white;
+        }
+        .sidebar .sidebar-content {
             background-image: url('https://github.com/VarpasConcepts/easyiolchatbot/blob/main/easyiol.png');
             background-size: cover;
             background-repeat: no-repeat;
