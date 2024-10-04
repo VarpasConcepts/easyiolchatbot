@@ -419,7 +419,6 @@ def get_binary_file_downloader_html(bin_file, file_label='File'):
 
 def main():
     st.set_page_config(
-        page_title="AI-ASSISTANT FOR IOL EDUCATION",
         layout="wide",
         initial_sidebar_state="collapsed",
         menu_items=None
