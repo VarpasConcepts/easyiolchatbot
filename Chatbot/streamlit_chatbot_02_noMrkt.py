@@ -514,11 +514,6 @@ def main():
         st.empty()
         st.empty()
         st.empty()
-        
-        # Add buttons or other content
-        st.button("Patient Resources")
-        st.button("About EasyIOL")
-        st.button("Contact Us")
 
 
     # Initialize session state variables
