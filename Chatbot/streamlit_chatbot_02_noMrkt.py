@@ -484,10 +484,6 @@ def main():
         .stFileUploader {
             background-color: var(--secondary-background-color);
         }
-        .stFileUploader [data-testid="stFileUploadDropzone"] {
-            background-color: white;
-            border: 2px dashed #CCCCCC;
-            border-radius: 5px;
         }
         .stFileUploader [data-testid="stFileUploadDropzone"] button {
             background-color: #000000;
