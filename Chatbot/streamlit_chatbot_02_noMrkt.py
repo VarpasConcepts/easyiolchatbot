@@ -513,13 +513,17 @@ def main():
                 cursor: pointer;
                 border-radius: 5px;
             }
-            .stButton > button:nth-child(1):not(:only-child) {
+            /* Specific styling for End Conversation button */
+            form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button {
                 background-color: #FF4B4B !important; /* Red color */
                 color: white !important;
             }
-            .stButton > button:nth-child(1):not(:only-child):hover {
+            form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button:hover {
                 background-color: #D63E3E !important; /* Darker shade for hover */
-            }     
+            }
+            form[data-testid="stForm"] > div > div:nth-child(1) .stButton > button {
+                background-color: #4CAF50 !important; /* Green color */
+            }
          
             /* Additional styling for sidebar elements if needed */
             .sidebar-text {
