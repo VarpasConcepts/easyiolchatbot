@@ -431,6 +431,7 @@ def main():
         :root {
             --secondary-background-color: #f0f2f6;
         }
+        st.sidebar.image("./easyiol.png", use_column_width=True)
         [data-testid=stSidebar] {
             color:white;
             background-color: #092247;
