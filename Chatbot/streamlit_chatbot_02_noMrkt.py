@@ -88,7 +88,7 @@ def chat_with_gpt(messages):
         messages.insert(0, system_message)
         
         response = client.chat.completions.create(
-            model="gpt-4-turbo",
+            model="gpt-4o",
             messages=messages,
             temperature=0.7  # Slightly increase randomness to encourage varied, concise responses
         )
