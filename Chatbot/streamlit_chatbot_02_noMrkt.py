@@ -513,15 +513,15 @@ def main():
                 cursor: pointer;
                 border-radius: 5px;
             }
-            .stButton > button:contains("End Conversation") {
-                background-color: #FF4B4B !important; /* Red color */
-            }
-
+                
             /* Additional styling for sidebar elements if needed */
             .sidebar-text {
                 color: white;
                 font-size: 1rem;
                 margin-bottom: 0.5rem;
+            }
+            .stButton > button:contains("End Conversation") {
+                background-color: #FF4B4B !important; /* Red color */
             }
             </style>
     """, unsafe_allow_html=True)
