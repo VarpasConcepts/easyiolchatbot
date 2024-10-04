@@ -527,7 +527,7 @@ def main():
         st.empty()
         st.empty()
         st.sidebar.image("./easyiol.png", use_column_width=True)
-        st.markdown("<p class='sidebar-text'>Please upload the prescription that was provided by your doctor</p>", unsafe_allow_html=True)
+        st.markdown("<p class='sidebar-text'>Please upload the file that was provided by your doctor</p>", unsafe_allow_html=True)
 
 
     # Initialize session state variables
