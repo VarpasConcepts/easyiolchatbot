@@ -513,14 +513,13 @@ def main():
                 cursor: pointer;
                 border-radius: 5px;
             }
-            form[data-testid="stForm"] > div:nth-child(2) > div:nth-child(2) .stButton > button {
+            .stButton > button:nth-child(1):not(:only-child) {
                 background-color: #FF4B4B !important; /* Red color */
                 color: white !important;
             }
-                
-            form[data-testid="stForm"] > div:nth-child(2) > div:nth-child(2) .stButton > button:hover {
+            .stButton > button:nth-child(1):not(:only-child):hover {
                 background-color: #D63E3E !important; /* Darker shade for hover */
-            }           
+            }     
          
             /* Additional styling for sidebar elements if needed */
             .sidebar-text {
