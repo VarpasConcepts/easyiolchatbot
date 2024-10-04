@@ -435,6 +435,7 @@ def main():
 
             /* Sidebar styling */
             [data-testid=stSidebar] {
+                width: 350px;
                 background-color: #092247;
             }
             .sidebar .sidebar-content {
@@ -450,7 +451,7 @@ def main():
 
             /* File uploader styling */
             [data-testid="stFileUploader"] {
-                margin-top: -1rem;
+                margin-top: -2rem;
             }
             [data-testid="stFileUploader"] > label {
                 color: white !important;
