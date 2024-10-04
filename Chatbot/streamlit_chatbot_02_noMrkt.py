@@ -427,88 +427,98 @@ def main():
     
     # Set the theme to light mode and add custom sidebar styling
     st.markdown("""
-        <style>
-        :root {
-            --secondary-background-color: #f0f2f6;
-        }
-        [data-testid=stSidebar] {
-            background-color: #092247;
-        }
-        .sidebar .sidebar-content {
-            color: white;
-            background-image: url('https://raw.githubusercontent.com/VarpasConcepts/easyiolchatbot/main/easyiol.png');
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: top left;
-        }
-        .sidebar .sidebar-content .block-container {
-            padding-top: 5rem;
-        }
-        
-        /* File uploader styling */
-        [data-testid="stFileUploader"] {
-            margin-top: -20px;
-        }
-        [data-testid="stFileUploader"] label {
-            color: white !important;
-        }
-        [data-testid="stFileUploader"] > div > div {
-            background-color: white !important;
-            border-radius: 5px !important;
-        }
-        [data-testid="stFileUploadDropzone"] {
-            min-height: 100px !important;
-        }
-        [data-testid="stFileUploadDropzone"] button {
-            background-color: #ffffff !important;
-            color: #000000 !important;
-            border: 1px solid #cccccc !important;
-        }
-        
-        /* Chat bubble styling */
-        .chat-bubble {
-            padding: 10px 15px;
-            border-radius: 20px;
-            margin-bottom: 10px;
-            display: inline-block;
-            max-width: 70%;
-            word-wrap: break-word;
-        }
-        .bot-bubble {
-            background-color: #D3D3D3;
-            float: left;
-            clear: both;
-        }
-        .user-bubble {
-            background-color: #87CEFA;
-            float: right;
-            clear: both;
-        }
-        .debug-bubble {
-            background-color: #FFB6C1;
-            float: left;
-            clear: both;
-            font-style: italic;
-        }
-        .chat-container {
-            margin-bottom: 20px;
-        }
-        
-        /* Button styling */
-        .stButton>button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 24px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        </style>
+            <style>
+            /* Root variables */
+            :root {
+                --secondary-background-color: #f0f2f6;
+            }
+
+            /* Sidebar styling */
+            [data-testid=stSidebar] {
+                background-color: #092247;
+            }
+            .sidebar .sidebar-content {
+                color: white;
+            }
+            .sidebar .sidebar-content .block-container {
+                padding-top: 1rem;
+            }
+            [data-testid=stSidebar] [data-testid=stText],
+            [data-testid=stSidebar] [data-testid=stMarkdown] p {
+                color: white !important;
+            }
+
+            /* File uploader styling */
+            [data-testid="stFileUploader"] {
+                margin-top: 1rem;
+            }
+            [data-testid="stFileUploader"] > label {
+                color: white !important;
+            }
+            [data-testid="stFileUploader"] > div > div {
+                background-color: white !important;
+                border-radius: 5px !important;
+            }
+            [data-testid="stFileUploadDropzone"] {
+                min-height: 100px !important;
+            }
+            [data-testid="stFileUploadDropzone"] button {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                border: 1px solid #cccccc !important;
+            }
+
+            /* Chat bubble styling */
+            .chat-bubble {
+                padding: 10px 15px;
+                border-radius: 20px;
+                margin-bottom: 10px;
+                display: inline-block;
+                max-width: 70%;
+                word-wrap: break-word;
+            }
+            .bot-bubble {
+                background-color: #D3D3D3;
+                float: left;
+                clear: both;
+            }
+            .user-bubble {
+                background-color: #87CEFA;
+                float: right;
+                clear: both;
+            }
+            .debug-bubble {
+                background-color: #FFB6C1;
+                float: left;
+                clear: both;
+                font-style: italic;
+            }
+            .chat-container {
+                margin-bottom: 20px;
+            }
+
+            /* Button styling */
+            .stButton > button {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                padding: 10px 24px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+                border-radius: 5px;
+            }
+
+            /* Additional styling for sidebar elements if needed */
+            .sidebar-text {
+                color: white;
+                font-size: 1rem;
+                margin-bottom: 0.5rem;
+            }
+            </style>
     """, unsafe_allow_html=True)
 
     # Create a sidebar
@@ -517,7 +527,7 @@ def main():
         st.empty()
         st.empty()
         st.sidebar.image("./easyiol.png", use_column_width=True)
-        st.write("Please upload the the prescription that was provided by your doctor")
+        st.markdown("<p class='sidebar-text'>Please upload the prescription that was provided by your doctor</p>", unsafe_allow_html=True)
 
 
     # Initialize session state variables
