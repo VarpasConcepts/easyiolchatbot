@@ -432,7 +432,8 @@ def main():
             --secondary-background-color: #f0f2f6;
         }
         [data-testid=stSidebar] {
-        background-color: #092247;
+            color:white;
+            background-color: #092247;
         }
         .sidebar .sidebar-content {
             background-image: url('https://github.com/VarpasConcepts/easyiolchatbot/blob/main/easyiol.png');
