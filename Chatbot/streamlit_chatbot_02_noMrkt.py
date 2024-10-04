@@ -421,7 +421,7 @@ def main():
     st.set_page_config(
         page_title="AI-ASSISTANT FOR IOL EDUCATION",
         layout="wide",
-        initial_sidebar_state="expanded",
+        initial_sidebar_state="collpased",
         menu_items=None
     )
     
@@ -432,7 +432,7 @@ def main():
             --secondary-background-color: #f0f2f6;
         }
         .sidebar .sidebar-content {
-            background-image: url('https://raw.githubusercontent.com/your-repo/easyiol.png');
+            background-image: url('https://github.com/VarpasConcepts/easyiolchatbot/blob/main/easyiol.png');
             background-size: cover;
             background-repeat: no-repeat;
             background-position: top left;
