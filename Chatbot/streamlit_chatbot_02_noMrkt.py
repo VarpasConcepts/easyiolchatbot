@@ -432,22 +432,40 @@ def main():
             --secondary-background-color: #f0f2f6;
         }
         [data-testid=stSidebar] {
-            color:white;
             background-color: #092247;
         }
         .sidebar .sidebar-content {
             color: white;
-        }
-        .sidebar .sidebar-content {
-            background-image: url('https://github.com/VarpasConcepts/easyiolchatbot/blob/main/easyiol.png');
-            background-size: cover;
+            background-image: url('https://raw.githubusercontent.com/VarpasConcepts/easyiolchatbot/main/easyiol.png');
+            background-size: contain;
             background-repeat: no-repeat;
             background-position: top left;
-            color: white;
         }
         .sidebar .sidebar-content .block-container {
             padding-top: 5rem;
         }
+        
+        /* File uploader styling */
+        [data-testid="stFileUploader"] {
+            margin-top: -20px;
+        }
+        [data-testid="stFileUploader"] label {
+            color: white !important;
+        }
+        [data-testid="stFileUploader"] > div > div {
+            background-color: white !important;
+            border-radius: 5px !important;
+        }
+        [data-testid="stFileUploadDropzone"] {
+            min-height: 100px !important;
+        }
+        [data-testid="stFileUploadDropzone"] button {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            border: 1px solid #cccccc !important;
+        }
+        
+        /* Chat bubble styling */
         .chat-bubble {
             padding: 10px 15px;
             border-radius: 20px;
@@ -475,12 +493,8 @@ def main():
         .chat-container {
             margin-bottom: 20px;
         }
-        }
-        .stFileUploader [data-testid="stFileUploadDropzone"] button {
-            margin-top = -20px;
-            background-color: #000000;
-            color: white;
-        }
+        
+        /* Button styling */
         .stButton>button {
             background-color: #4CAF50;
             color: white;
