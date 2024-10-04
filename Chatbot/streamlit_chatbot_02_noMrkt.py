@@ -502,6 +502,7 @@ def main():
         st.empty()
         st.empty()
         st.sidebar.image("./easyiol.png", use_column_width=True)
+        st.write("Please upload the the prescription that was provided by your doctor")
 
 
     # Initialize session state variables
