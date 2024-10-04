@@ -513,15 +513,20 @@ def main():
                 cursor: pointer;
                 border-radius: 5px;
             }
+            form[data-testid="stForm"] > div:nth-child(2) > div:nth-child(2) .stButton > button {
+                background-color: #FF4B4B !important; /* Red color */
+                color: white !important;
+            }
                 
+            form[data-testid="stForm"] > div:nth-child(2) > div:nth-child(2) .stButton > button:hover {
+                background-color: #D63E3E !important; /* Darker shade for hover */
+            }           
+         
             /* Additional styling for sidebar elements if needed */
             .sidebar-text {
                 color: white;
                 font-size: 1rem;
                 margin-bottom: 0.5rem;
-            }
-            .stButton > button:contains("End Conversation") {
-                background-color: #FF4B4B !important; /* Red color */
             }
             </style>
     """, unsafe_allow_html=True)
