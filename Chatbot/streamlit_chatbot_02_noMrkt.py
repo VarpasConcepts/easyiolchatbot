@@ -501,7 +501,6 @@ def main():
         # Add some space to push content below the logo
         st.empty()
         st.empty()
-        st.empty()
         st.sidebar.image("./easyiol.png", use_column_width=True)
 
 
