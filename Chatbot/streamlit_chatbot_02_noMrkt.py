@@ -6,6 +6,8 @@ from langchain_openai import OpenAIEmbeddings
 from langchain.chains import RetrievalQA
 from langchain_openai import OpenAI as LangChainOpenAI
 import time
+from fpdf import FPDF
+import base64
 
 # Add a debug flag
 DEBUG = False
@@ -88,7 +90,7 @@ def chat_with_gpt(messages):
         messages.insert(0, system_message)
         
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4",
             messages=messages,
             temperature=0.7  # Slightly increase randomness to encourage varied, concise responses
         )
@@ -348,6 +350,60 @@ def fix_spelling(query):
     debug_print(f"Spell-check complete. Corrected query: {corrected_query}")
     return corrected_query.strip()
 
+def generate_summary(chat_history):
+    debug_print("Entering generate_summary()")
+    summary_prompt = f"""
+    Please provide a concise summary of the following chat history between an AI assistant and a patient discussing intraocular lens (IOL) options. Focus on:
+
+    1. The patient's main concerns and questions about IOLs
+    2. Any specific lens types the patient showed interest in
+    3. Key lifestyle factors that might influence lens choice
+    4. Any misconceptions or areas where the patient needed clarification
+
+    Chat History:
+    {chat_history}
+
+    Please provide a summary that would be helpful for the surgeon to quickly understand the patient's needs and concerns:
+    """
+    messages = [{"role": "user", "content": summary_prompt}]
+    summary = chat_with_gpt(messages)
+    debug_print("Summary generated")
+    return summary
+
+def create_pdf(chat_history, summary):
+    debug_print("Entering create_pdf()")
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Set font
+    pdf.set_font("Arial", size=12)
+    
+    # Add title
+    pdf.cell(200, 10, txt="IOL Consultation Summary", ln=1, align='C')
+    
+    # Add chat history
+    pdf.cell(200, 10, txt="Chat History:", ln=1)
+    for role, message in chat_history:
+        pdf.multi_cell(0, 10, txt=f"{role.capitalize()}: {message}")
+        pdf.ln(5)
+    
+    # Add summary
+    pdf.add_page()
+    pdf.cell(200, 10, txt="Patient Summary:", ln=1)
+    pdf.multi_cell(0, 10, txt=summary)
+    
+    # Save the pdf
+    pdf_output = pdf.output(dest='S').encode('latin-1')
+    debug_print("PDF created successfully")
+    return pdf_output
+
+def get_binary_file_downloader_html(bin_file, file_label='File'):
+    debug_print("Entering get_binary_file_downloader_html()")
+    b64 = base64.b64encode(bin_file).decode()
+    href = f'<a href="data:application/octet-stream;base64,{b64}" download="{file_label}.pdf">Download {file_label}</a>'
+    debug_print("Download link created")
+    return href
+
 def main():
     st.set_page_config(
         page_title="AI-ASSISTANT FOR IOL EDUCATION",
@@ -414,6 +470,20 @@ def main():
     .stFileUploader [data-testid="stFileUploadDropzone"] button {
         background-color: #4CAF50;
         color: white;
+    }
+
+    .stButton>button {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 5px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -536,7 +606,11 @@ def main():
             with st.form(key='message_form'):
                 # Use a unique key for the text input field
                 user_input = st.text_input("You:", key=f"user_input_{st.session_state.input_key}")
-                submit_button = st.form_submit_button(label='Send')
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    submit_button = st.form_submit_button(label='Send')
+                with col2:
+                    end_conversation_button = st.form_submit_button(label='End Conversation')
 
             if submit_button and user_input:
                 debug_print(f"Processing user input: {user_input}")
@@ -577,6 +651,257 @@ def main():
                 # Increment the input key to force a reset of the input field
                 st.session_state.input_key += 1
                 st.experimental_rerun()
+
+            if end_conversation_button:
+                debug_print("End conversation button clicked")
+                with st.spinner("Generating conversation summary..."):
+                    # Generate summary
+                    chat_history_text = "\n".join([f"{role}: {message}" for role, message in st.session_state.chat_history])
+                    summary = generate_summary(chat_history_text)
+                    
+                    # Create PDF
+                    pdf_content = create_pdf(st.session_state.chat_history, summary)
+                    
+                    # Provide download link
+                    st.markdown(get_binary_file_downloader_html(pdf_content, 'IOL_Consultation_Summary'), unsafe_allow_html=True)
+                    
+                    # Clear conversation state
+                    st.session_state.messages = []
+                    st.session_state.chat_history = []
+                    st.session_state.user_lifestyle = ""
+                    st.session_state.show_lens_options = False
+                    st.session_state.greeted = False
+                    st.session_state.asked_name = False
+                    st.session_state.user_name = ""
+                    st.session_state.question_count = 0
+                    st.session_state.input_key = 0
+                    
+                    st.success("Thank you for your time. Your consultation summary is ready for download.")
+                    debug_print("Conversation ended, summary generated, and state reset")
+    st.set_page_config(
+        page_title="AI-ASSISTANT FOR IOL EDUCATION",
+        layout="wide",
+        initial_sidebar_state="collapsed",
+        menu_items=None
+    )
+    
+    # Set the theme to light mode
+    st.markdown("""
+        <style>
+        :root {
+            --secondary-background-color: #f0f2f6;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Apply custom CSS
+    st.markdown("""
+    <style>
+    .chat-bubble {
+        padding: 10px 15px;
+        border-radius: 20px;
+        margin-bottom: 10px;
+        display: inline-block;
+        max-width: 70%;
+        word-wrap: break-word;
+    }
+
+    .bot-bubble {
+        background-color: #D3D3D3;
+        float: left;
+        clear: both;
+    }
+
+    .user-bubble {
+        background-color: #87CEFA;
+        float: right;
+        clear: both;
+    }
+
+    .debug-bubble {
+        background-color: #FFB6C1;
+        float: left;
+        clear: both;
+        font-style: italic;
+    }
+
+    .chat-container {
+        margin-bottom: 20px;
+    }
+
+    /* Ensure file uploader uses light theme */
+    .stFileUploader {
+        background-color: var(--secondary-background-color);
+    }
+
+    .stFileUploader [data-testid="stFileUploadDropzone"] {
+        background-color: white;
+        border: 2px dashed #CCCCCC;
+        border-radius: 5px;
+    }
+
+    .stFileUploader [data-testid="stFileUploadDropzone"] button {
+        background-color: #4CAF50;
+        color: white;
+    }
+
+    .stButton>button {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    st.title("AI-Assistant for IOL Education - Non Marketing")
+
+    # Initialize session state variables
+    if 'messages' not in st.session_state:
+        st.session_state.messages = []
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    if 'user_lifestyle' not in st.session_state:
+        st.session_state.user_lifestyle = ""
+    if 'prioritized_lenses' not in st.session_state:
+        st.session_state.prioritized_lenses = []
+    if 'show_lens_options' not in st.session_state:
+        st.session_state.show_lens_options = False
+    if 'greeted' not in st.session_state:
+        st.session_state.greeted = False
+    if 'doctor_name' not in st.session_state:
+        st.session_state.doctor_name = ""
+    if 'asked_name' not in st.session_state:
+        st.session_state.asked_name = False
+    if 'user_name' not in st.session_state:
+        st.session_state.user_name = ""
+    if 'question_count' not in st.session_state:
+        st.session_state.question_count = 0
+    if 'input_key' not in st.session_state:
+        st.session_state.input_key = 0
+
+    debug_print("Initializing vectorstore")
+    vectorstore = load_vectorstore()
+
+    uploaded_file = st.file_uploader("Please upload the file your surgeon has provided you", type=["txt"])
+
+    if uploaded_file is not None and not st.session_state.greeted:
+        debug_print("File uploaded, processing")
+        doctor_name, prioritized_lenses = read_file(uploaded_file)
+        if doctor_name and prioritized_lenses:
+            st.session_state.doctor_name = doctor_name
+            st.session_state.prioritized_lenses = prioritized_lenses
+            initial_greeting = f"Hello! I'm {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"
+            name_request = "Before we begin, I'd love to know your name. What should I call you?"
+            
+            st.session_state.messages = [
+                {"role": "system", "content": "You are an AI assistant for IOL selection."},
+                {"role": "assistant", "content": initial_greeting},
+                {"role": "assistant", "content": name_request}
+            ]
+            st.session_state.chat_history = [
+                ("bot", initial_greeting),
+                ("bot", name_request)
+            ]
+            st.session_state.greeted = True
+            st.session_state.asked_name = True
+            debug_print("Greeting and name request set")
+        else:
+            st.error("Unable to process the uploaded file. Please check the file format.")
+            debug_print("Error processing uploaded file")
+
+    # Chat bubble display
+    chat_container = st.container()
+    with chat_container:
+        for role, message in st.session_state.chat_history:
+            if role == "bot":
+                st.markdown(f"""
+                <div class="chat-bubble bot-bubble">
+                {message}
+                </div>
+                """, unsafe_allow_html=True)
+            elif role == "user":
+                st.markdown(f"""
+                <div class="chat-bubble user-bubble">
+                {message}
+                </div>
+                """, unsafe_allow_html=True)
+            elif role == "debug":
+                st.markdown(f"""
+                <div class="chat-bubble debug-bubble">
+                {message}
+                </div>
+                """, unsafe_allow_html=True)
+        
+        # Add some space after the chat bubbles
+        st.markdown("<div style='margin-bottom: 100px;'></div>", unsafe_allow_html=True)
+
+    if st.session_state.greeted:
+        if st.session_state.asked_name and not st.session_state.user_name:
+            # Display two input fields for first name and last name
+            with st.form(key='name_form'):
+                col1, col2 = st.columns(2)
+                with col1:
+                    first_name = st.text_input("First Name:", key="first_name")
+                with col2:
+                    last_name = st.text_input("Last Name:", key="last_name")
+                
+                submit_button = st.form_submit_button("Submit")
+
+            if submit_button or (first_name and last_name):  # This allows both button click and Enter key to submit
+                if first_name and last_name:
+                    st.session_state.user_name = f"{first_name} {last_name}"
+                    
+                    # Add the user's name to the chat history
+                    st.session_state.messages.append({"role": "user", "content": st.session_state.user_name})
+                    st.session_state.chat_history.append(("user", st.session_state.user_name))
+                    
+                    bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
+                    st.session_state.messages.append({"role": "assistant", "content": bot_response})
+                    st.session_state.chat_history.append(("bot", bot_response))
+                    
+                    lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
+                    st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
+                    st.session_state.chat_history.append(("bot", lifestyle_question))
+                    debug_print(f"User name set and added to chat history: {st.session_state.user_name}")
+                    st.session_state.asked_name = False
+                    st.experimental_rerun()  # Force a rerun to update the UI
+                else:
+                    st.warning("Please enter both your first and last name.")
+        else:
+            with st.form(key='message_form'):
+                # Use a unique key for the text input field
+                user_input = st.text_input("You:", key=f"user_input_{st.session_state.input_key}")
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    submit_button = st.form_submit_button(label='Send')
+                with col2:
+                    end_conversation_button = st.form_submit_button(label='End Conversation')
+
+            if submit_button and user_input:
+                debug_print(f"Processing user input: {user_input}")
+                with st.spinner("Processing your input..."):
+                    # Apply spell-checking in the background
+                    corrected_input = fix_spelling(user_input)
+                    debug_print(f"Corrected input: {corrected_input}")
+                    
+                    st.session_state.messages.append({"role": "user", "content": corrected_input})
+                    st.session_state.chat_history.append(("user", corrected_input))
+                    st.session_state.question_count += 1
+                    
+                    debug_print(f"Question count: {st.session_state.question_count}")
+
+                    if not st.session_state.show_lens_options:
+                        st.session_state.user_lifestyle = corrected_input
+                        bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+                        st.session_state.messages.append({"role": "assistant", "content": bot_response})
 
 if __name__ == "__main__":
     main()
