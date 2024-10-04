@@ -513,6 +513,9 @@ def main():
                 cursor: pointer;
                 border-radius: 5px;
             }
+            .stButton > button:contains("End Conversation") {
+                background-color: #FF4B4B !important; /* Red color */
+            }
 
             /* Additional styling for sidebar elements if needed */
             .sidebar-text {
