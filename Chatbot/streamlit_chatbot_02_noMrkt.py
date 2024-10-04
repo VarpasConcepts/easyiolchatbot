@@ -418,7 +418,7 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
-    st.title("AI-Assistant for IOL Education")
+    st.title("AI-Assistant for IOL Education - Non Marketing")
 
     # Initialize session state variables
     if 'messages' not in st.session_state:
