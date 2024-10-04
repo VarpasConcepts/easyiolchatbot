@@ -548,7 +548,7 @@ def main():
     debug_print("Initializing vectorstore")
     vectorstore = load_vectorstore()
 
-    uploaded_file = st.file_uploader("Please upload the file your surgeon has provided you", type=["txt"])
+    uploaded_file = st.sidebar.file_uploader("Please upload the file your surgeon has provided you", type=["txt"])
 
     if uploaded_file is not None and not st.session_state.greeted:
         debug_print("File uploaded, processing")
