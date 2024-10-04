@@ -480,9 +480,6 @@ def main():
             background-color: #000000;
             color: white;
         }
-        .stApp {
-            color: white;
-        }
         .stButton>button {
             background-color: #4CAF50;
             color: white;
