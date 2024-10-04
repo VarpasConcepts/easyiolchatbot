@@ -6,8 +6,12 @@ from langchain_openai import OpenAIEmbeddings
 from langchain.chains import RetrievalQA
 from langchain_openai import OpenAI as LangChainOpenAI
 import time
-from fpdf import FPDF
 import base64
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_JUSTIFY
+from io import BytesIO
 
 # Add a debug flag
 DEBUG = False
@@ -372,30 +376,39 @@ def generate_summary(chat_history):
 
 def create_pdf(chat_history, summary):
     debug_print("Entering create_pdf()")
-    pdf = FPDF()
-    pdf.add_page()
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter,
+                            rightMargin=72, leftMargin=72,
+                            topMargin=72, bottomMargin=18)
     
-    # Set font
-    pdf.set_font("Arial", size=12)
-    
+    Story = []
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY))
+
     # Add title
-    pdf.cell(200, 10, txt="IOL Consultation Summary", ln=1, align='C')
-    
+    Story.append(Paragraph("IOL Consultation Summary", styles['Heading1']))
+    Story.append(Spacer(1, 12))
+
     # Add chat history
-    pdf.cell(200, 10, txt="Chat History:", ln=1)
+    Story.append(Paragraph("Chat History:", styles['Heading2']))
     for role, message in chat_history:
-        pdf.multi_cell(0, 10, txt=f"{role.capitalize()}: {message}")
-        pdf.ln(5)
-    
+        p = Paragraph(f"<b>{role.capitalize()}:</b> {message}", styles['Justify'])
+        Story.append(p)
+        Story.append(Spacer(1, 6))
+
+    Story.append(Spacer(1, 12))
+
     # Add summary
-    pdf.add_page()
-    pdf.cell(200, 10, txt="Patient Summary:", ln=1)
-    pdf.multi_cell(0, 10, txt=summary)
+    Story.append(Paragraph("Patient Summary:", styles['Heading2']))
+    Story.append(Spacer(1, 6))
+    Story.append(Paragraph(summary, styles['Justify']))
+
+    doc.build(Story)
+    pdf_content = buffer.getvalue()
+    buffer.close()
     
-    # Save the pdf
-    pdf_output = pdf.output(dest='S').encode('latin-1')
     debug_print("PDF created successfully")
-    return pdf_output
+    return pdf_content
 
 def get_binary_file_downloader_html(bin_file, file_label='File'):
     debug_print("Entering get_binary_file_downloader_html()")
