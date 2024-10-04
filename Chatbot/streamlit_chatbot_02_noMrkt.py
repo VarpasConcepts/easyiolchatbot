@@ -502,7 +502,7 @@ def main():
         st.empty()
         st.empty()
         st.empty()
-        st.sidebar.image("./easyio.png", use_column_width=True)
+        st.sidebar.image("./easyiol.png", use_column_width=True)
 
 
     # Initialize session state variables
