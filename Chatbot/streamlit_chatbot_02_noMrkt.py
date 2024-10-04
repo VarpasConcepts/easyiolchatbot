@@ -421,90 +421,102 @@ def main():
     st.set_page_config(
         page_title="AI-ASSISTANT FOR IOL EDUCATION",
         layout="wide",
-        initial_sidebar_state="collapsed",
+        initial_sidebar_state="expanded",
         menu_items=None
     )
     
-    # Set the theme to light mode
+    # Set the theme to light mode and add custom sidebar styling
     st.markdown("""
         <style>
         :root {
             --secondary-background-color: #f0f2f6;
         }
+        .sidebar .sidebar-content {
+            background-image: url('https://raw.githubusercontent.com/your-repo/easyiol.png');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: top left;
+            color: white;
+        }
+        .sidebar .sidebar-content .block-container {
+            padding-top: 5rem;
+        }
+        .sidebar .sidebar-content .stButton>button {
+            background-color: transparent;
+            color: white;
+            border: 1px solid white;
+            border-radius: 20px;
+            padding: 10px 15px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .chat-bubble {
+            padding: 10px 15px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+            display: inline-block;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .bot-bubble {
+            background-color: #D3D3D3;
+            float: left;
+            clear: both;
+        }
+        .user-bubble {
+            background-color: #87CEFA;
+            float: right;
+            clear: both;
+        }
+        .debug-bubble {
+            background-color: #FFB6C1;
+            float: left;
+            clear: both;
+            font-style: italic;
+        }
+        .chat-container {
+            margin-bottom: 20px;
+        }
+        .stFileUploader {
+            background-color: var(--secondary-background-color);
+        }
+        .stFileUploader [data-testid="stFileUploadDropzone"] {
+            background-color: white;
+            border: 2px dashed #CCCCCC;
+            border-radius: 5px;
+        }
+        .stFileUploader [data-testid="stFileUploadDropzone"] button {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .stButton>button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
         </style>
     """, unsafe_allow_html=True)
 
-    # Apply custom CSS
-    st.markdown("""
-    <style>
-    .chat-bubble {
-        padding: 10px 15px;
-        border-radius: 20px;
-        margin-bottom: 10px;
-        display: inline-block;
-        max-width: 70%;
-        word-wrap: break-word;
-    }
-
-    .bot-bubble {
-        background-color: #D3D3D3;
-        float: left;
-        clear: both;
-    }
-
-    .user-bubble {
-        background-color: #87CEFA;
-        float: right;
-        clear: both;
-    }
-
-    .debug-bubble {
-        background-color: #FFB6C1;
-        float: left;
-        clear: both;
-        font-style: italic;
-    }
-
-    .chat-container {
-        margin-bottom: 20px;
-    }
-
-    /* Ensure file uploader uses light theme */
-    .stFileUploader {
-        background-color: var(--secondary-background-color);
-    }
-
-    .stFileUploader [data-testid="stFileUploadDropzone"] {
-        background-color: white;
-        border: 2px dashed #CCCCCC;
-        border-radius: 5px;
-    }
-
-    .stFileUploader [data-testid="stFileUploadDropzone"] button {
-        background-color: #4CAF50;
-        color: white;
-    }
-
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        padding: 10px 24px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 16px;
-        margin: 4px 2px;
-        cursor: pointer;
-        border-radius: 5px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
+    # Create a sidebar
     with st.sidebar:
-        st.header("IOL Education Resources")
-        st.write("Welcome to our IOLs")
-    
+        # Add some space to push content below the logo
+        st.empty()
+        st.empty()
+        st.empty()
+        
+        # Add buttons or other content
+        st.button("Patient Resources")
+        st.button("About EasyIOL")
+        st.button("Contact Us")
+
     st.title("AI-Assistant for IOL Education - Non Marketing")
 
     # Initialize session state variables
