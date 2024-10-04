@@ -450,7 +450,7 @@ def main():
 
             /* File uploader styling */
             [data-testid="stFileUploader"] {
-                margin-top: 1rem;
+                margin-top: -1rem;
             }
             [data-testid="stFileUploader"] > label {
                 color: white !important;
