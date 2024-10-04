@@ -437,7 +437,6 @@ def main():
             }
             /* Sidebar styling */
             [data-testid=stSidebar] {
-                width: 350px;
                 background-color: #092247;
             }
             .sidebar .sidebar-content {
