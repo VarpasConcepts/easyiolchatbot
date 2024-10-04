@@ -476,7 +476,13 @@ def main():
             margin-bottom: 20px;
         }
         }
-
+        .stFileUploader [data-testid="stFileUploadDropzone"] button {
+            background-color: #000000;
+            color: white;
+        }
+        .stApp {
+            color: white;
+        }
         .stButton>button {
             background-color: #4CAF50;
             color: white;
