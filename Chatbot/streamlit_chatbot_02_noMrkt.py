@@ -425,114 +425,9 @@ def main():
         menu_items=None
     )
     
-    # Set the theme to light mode and add custom sidebar styling
-    st.markdown("""
-            <style>
-            /* Root variables */
-            :root {
-                --secondary-background-color: #f0f2f6;
-            }
-            [data-testid="stSidebar"] [data-testid="stSidebarNav"] button[kind="header"] {
-                 color: white !important;
-            }
-            /* Sidebar styling */
-            [data-testid=stSidebar] {
-                background-color: #092247;
-            }
-            .sidebar .sidebar-content {
-                color: white;
-            }
-            .sidebar .sidebar-content .block-container {
-                padding-top: 1rem;
-            }
-            [data-testid=stSidebar] [data-testid=stText],
-            [data-testid=stSidebar] [data-testid=stMarkdown] p {
-                color: white !important;
-            }
-
-            /* File uploader styling */
-            [data-testid="stFileUploader"] {
-                margin-top: -2rem;
-            }
-            [data-testid="stFileUploader"] > label {
-                color: white !important;
-            }
-            [data-testid="stFileUploader"] > div > div {
-                background-color: white !important;
-                border-radius: 5px !important;
-            }
-            [data-testid="stFileUploadDropzone"] {
-                min-height: 100px !important;
-            }
-            [data-testid="stFileUploadDropzone"] button {
-                background-color: #ffffff !important;
-                color: #000000 !important;
-                border: 1px solid #cccccc !important;
-            }
-
-            /* Chat bubble styling */
-            .chat-bubble {
-                padding: 10px 15px;
-                border-radius: 20px;
-                margin-bottom: 10px;
-                display: inline-block;
-                max-width: 70%;
-                word-wrap: break-word;
-            }
-            .bot-bubble {
-                background-color: #D3D3D3;
-                float: left;
-                clear: both;
-            }
-            .user-bubble {
-                background-color: #87CEFA;
-                float: right;
-                clear: both;
-            }
-            .debug-bubble {
-                background-color: #FFB6C1;
-                float: left;
-                clear: both;
-                font-style: italic;
-            }
-            .chat-container {
-                margin-bottom: 20px;
-            }
-
-            /* Button styling */
-            .stButton > button {
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                padding: 10px 24px;
-                text-align: center;
-                text-decoration: none;
-                display: inline-block;
-                font-size: 16px;
-                margin: 4px 2px;
-                cursor: pointer;
-                border-radius: 5px;
-            }
-            /* Specific styling for End Conversation button */
-            form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button {
-                background-color: #FF4B4B !important; /* Red color */
-                color: white !important;
-            }
-            form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button:hover {
-                background-color: #D63E3E !important; /* Darker shade for hover */
-            }
-            form[data-testid="stForm"] > div > div:nth-child(1) .stButton > button {
-                background-color: #4CAF50 !important; /* Green color */
-            }
-         
-            /* Additional styling for sidebar elements if needed */
-            .sidebar-text {
-                color: white;
-                font-size: 1rem;
-                margin-bottom: 0.5rem;
-            }
-            </style>
-    """, unsafe_allow_html=True)
+    # Load and apply the external CSS
+    with open('styles.css') as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
     # Create a sidebar
     with st.sidebar:
@@ -541,7 +436,6 @@ def main():
         st.empty()
         st.sidebar.image("./easyiol.png", use_column_width=True)
         st.markdown("<p class='sidebar-text'>Please upload the file that was provided by your doctor</p>", unsafe_allow_html=True)
-
 
     # Initialize session state variables
     if 'messages' not in st.session_state:
@@ -566,6 +460,10 @@ def main():
         st.session_state.question_count = 0
     if 'input_key' not in st.session_state:
         st.session_state.input_key = 0
+    if 'asked_about_iols' not in st.session_state:
+        st.session_state.asked_about_iols = False
+    if 'explained_iols' not in st.session_state:
+        st.session_state.explained_iols = False
 
     debug_print("Initializing vectorstore")
     vectorstore = load_vectorstore()
@@ -657,7 +555,6 @@ def main():
                     st.warning("Please enter both your first and last name.")
         else:
             with st.form(key='message_form'):
-                # Use a unique key for the text input field
                 user_input = st.text_input("You:", key=f"user_input_{st.session_state.input_key}")
                 col1, col2 = st.columns([3, 1])
                 with col1:
@@ -668,7 +565,6 @@ def main():
             if submit_button and user_input:
                 debug_print(f"Processing user input: {user_input}")
                 with st.spinner("Processing your input..."):
-                    # Apply spell-checking in the background
                     corrected_input = fix_spelling(user_input)
                     debug_print(f"Corrected input: {corrected_input}")
                     
@@ -678,12 +574,31 @@ def main():
                     
                     debug_print(f"Question count: {st.session_state.question_count}")
 
-                    if not st.session_state.show_lens_options:
+                    if not st.session_state.user_lifestyle:
                         st.session_state.user_lifestyle = corrected_input
-                        bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
-                        st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                        st.session_state.chat_history.append(("bot", bot_response))
-                        debug_print("Processed initial lifestyle query")
+                        thank_you_message = f"Thank you for sharing your lifestyle details with me. I appreciate you taking the time to help me understand your needs better."
+                        st.session_state.messages.append({"role": "assistant", "content": thank_you_message})
+                        st.session_state.chat_history.append(("bot", thank_you_message))
+                        
+                        follow_up_message = "I understand that cataract surgery can feel overwhelming, but don't worry – we'll take it step by step together. Would you like to know more about IOLs (Intraocular Lenses) before we discuss your options?"
+                        st.session_state.messages.append({"role": "assistant", "content": follow_up_message})
+                        st.session_state.chat_history.append(("bot", follow_up_message))
+                        
+                        st.session_state.asked_about_iols = True
+                    elif st.session_state.asked_about_iols and not st.session_state.explained_iols:
+                        if corrected_input.lower() in ['yes', 'y', 'sure', 'okay', 'ok']:
+                            iol_explanation = chat_with_gpt([
+                                {"role": "system", "content": "You are an AI assistant explaining IOLs to a patient."},
+                                {"role": "user", "content": f"Explain what IOLs are and how they relate to this lifestyle: {st.session_state.user_lifestyle}"}
+                            ])
+                            st.session_state.messages.append({"role": "assistant", "content": iol_explanation})
+                            st.session_state.chat_history.append(("bot", iol_explanation))
+                            st.session_state.explained_iols = True
+                        
+                        lens_options = process_query("What lenses did the doctor suggest?", vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+                        st.session_state.messages.append({"role": "assistant", "content": lens_options})
+                        st.session_state.chat_history.append(("bot", lens_options))
+                        st.session_state.show_lens_options = True
                     else:
                         bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
 
@@ -691,7 +606,6 @@ def main():
                             st.session_state.messages.append({"role": "assistant", "content": bot_response})
                             st.session_state.chat_history.append(("bot", bot_response))
 
-                            # Check if it's time to display the follow-up prompt (5th question and every odd question after)
                             if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
                                 follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
                                 st.session_state.messages.append({"role": "assistant", "content": follow_up})
@@ -728,6 +642,8 @@ def main():
                     st.session_state.user_name = ""
                     st.session_state.question_count = 0
                     st.session_state.input_key = 0
+                    st.session_state.asked_about_iols = False
+                    st.session_state.explained_iols = False
                     
                     st.success("Thank you for your time. Your consultation summary is ready for download.")
                     debug_print("Conversation ended, summary generated, and state reset")
