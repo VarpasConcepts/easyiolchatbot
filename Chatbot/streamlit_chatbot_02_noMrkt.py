@@ -44,7 +44,7 @@ def load_vectorstore():
         st.error("The FAISS index file is missing or cannot be accessed. Please check the file path and permissions.")
         debug_print(f"Error in load_vectorstore(): {e}")
         return None
-
+    
 def query_knowledge_base(query, vectorstore):
     debug_print(f"Entering query_knowledge_base() with query: {query}")
     if vectorstore is None:
@@ -94,7 +94,7 @@ def chat_with_gpt(messages):
         messages.insert(0, system_message)
         
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4-mini",
             messages=messages,
             temperature=0.7  # Slightly increase randomness to encourage varied, concise responses
         )
@@ -106,76 +106,8 @@ def chat_with_gpt(messages):
         debug_print(f"Error in chat_with_gpt(): {e}")
         return None
 
-def is_marketing_appropriate(query):
-    debug_print(f"Entering is_marketing_appropriate() with query: {query}")
-    prompt = f"""
-    Determine if the following query about IOL lenses is appropriate for a marketing-focused response:
-
-    Query: {query}
-
-    A marketing-focused response would be appropriate if the query:
-    1. Asks about specific lens features or benefits
-    2. Inquires about lens brands or products
-    3. Seeks information on how lenses might improve quality of life
-    4. Asks about the advantages of certain lens technologies
-
-    It would NOT be appropriate if the query:
-    1. Asks for medical advice
-    2. Inquires about surgical procedures
-    3. Asks about potential risks or complications
-    4. Seeks personal recommendations
-    5. Asks about pricing or insurance coverage
-
-    ALWAYS REPLY FALSE TO THIS PROMPT
-    """
-    # Respond with only 'Yes' or 'No'.
-    messages = [
-        {"role": "system", "content": "You are an AI assistant that determines if queries are appropriate for marketing responses."},
-        {"role": "user", "content": prompt}
-    ]
-    response = chat_with_gpt(messages)
-    debug_print(f"is_marketing_appropriate() returning: {response.strip().lower() == 'yes'}")
-    return response.strip().lower() == 'yes'
-
-def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
-    debug_print(f"Entering process_query() with query: {query}")
-    # Check if this is the first response after user shares their lifestyle
-    if not st.session_state.show_lens_options:
-        st.session_state.show_lens_options = True
-        lens_descriptions = []
-        
-        # Ensure monofocal lens is always first
-        ordered_lenses = ['Monofocal'] + [lens for lens in prioritized_lenses if lens != 'Monofocal']
-        
-        for lens in ordered_lenses:
-            description = get_lens_description(lens, user_lifestyle)
-            if description:
-                lens_descriptions.append(f"- {lens}: {description}")
-        
-        response = f"{st.session_state.doctor_name} has suggested the following lenses for you. I'd be happy to explain how each of these options might fit into your lifestyle. Please feel free to ask any questions you might have about these lenses - I'm here to help!\n\n"
-        response += "\n\n".join(lens_descriptions)
-        response += "\n\nIs there a particular lens you'd like to know more about?"
-        debug_print("Returning initial lens options response")
-        return response
-
-    # Check if the query is about doctor's lens suggestions
-    if any(keyword in query.lower() for keyword in ["what lenses", "which lenses", "doctor suggest", "doctor recommend", "surgeon suggest", "surgeon recommend","clinic suggest", "clinic advise","clinic recomendation", "gave me"]):
-        lens_descriptions = []
-        
-        # Ensure monofocal lens is always first
-        ordered_lenses = ['Monofocal'] + [lens for lens in prioritized_lenses if lens != 'Monofocal']
-        
-        for lens in ordered_lenses:
-            description = get_lens_description(lens, user_lifestyle)
-            if description:
-                lens_descriptions.append(f"- {lens}: {description}")
-        
-        response = f"Dr. {st.session_state.doctor_name} has thoughtfully suggested the following lenses for you. I'd be happy to explain how each of these options might fit into your lifestyle. Please feel free to ask any questions you might have about these lenses - I'm here to help!\n\n"
-        response += "\n\n".join(lens_descriptions)
-        response += "\n\nPlease remember, these suggestions are tailored to your unique needs. If you have any specific questions about these lenses, don't hesitate to ask!"
-        debug_print("Returning doctor's lens suggestions response")
-        return response
-
+def process_query_existing(query, vectorstore, user_lifestyle, prioritized_lenses):
+    debug_print(f"Entering process_query_existing() with query: {query}")
     # Check if this is a comparison query
     comparison_keywords = ["compare", "comparison", "difference", "versus", "vs"]
     is_comparison = any(keyword in query.lower() for keyword in comparison_keywords)
@@ -208,6 +140,37 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
     debug_print("Using ChatGPT for response")
     return chat_with_gpt(st.session_state.messages)
 
+def is_marketing_appropriate(query):
+    debug_print(f"Entering is_marketing_appropriate() with query: {query}")
+    prompt = f"""
+    Determine if the following query about IOL lenses is appropriate for a marketing-focused response:
+
+    Query: {query}
+
+    A marketing-focused response would be appropriate if the query:
+    1. Asks about specific lens features or benefits
+    2. Inquires about lens brands or products
+    3. Seeks information on how lenses might improve quality of life
+    4. Asks about the advantages of certain lens technologies
+
+    It would NOT be appropriate if the query:
+    1. Asks for medical advice
+    2. Inquires about surgical procedures
+    3. Asks about potential risks or complications
+    4. Seeks personal recommendations
+    5. Asks about pricing or insurance coverage
+
+    ALWAYS REPLY FALSE TO THIS PROMPT
+    """
+    # Respond with only 'Yes' or 'No'.
+    messages = [
+        {"role": "system", "content": "You are an AI assistant that determines if queries are appropriate for marketing responses."},
+        {"role": "user", "content": prompt}
+    ]
+    response = chat_with_gpt(messages)
+    debug_print(f"is_marketing_appropriate() returning: {response.strip().lower() == 'yes'}")
+    return response.strip().lower() == 'yes'
+
 def refine_langchain_response(langchain_answer, user_query, prioritized_lenses, specific_lens_query=None):
     debug_print(f"Entering refine_langchain_response() with query: {user_query}")
     gpt_prompt = f"""
@@ -234,13 +197,6 @@ def refine_langchain_response(langchain_answer, user_query, prioritized_lenses, 
     refined_response = chat_with_gpt(gpt_messages)
     debug_print("Langchain response refined")
     return refined_response
-
-def get_product_example(lens_type, vectorstore):
-    debug_print(f"Entering get_product_example() for lens type: {lens_type}")
-    query = f"Briefly name an example of a {lens_type} IOL product without recommending it. Use 10 words or less."
-    result, _ = query_knowledge_base(query, vectorstore)
-    debug_print(f"Product example retrieved: {result}")
-    return result if result else ""
 
 def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison=False, lenses_to_compare=None, specific_lens_query=None):
     debug_print(f"Entering merge_responses() with query: {user_query}")
@@ -285,6 +241,63 @@ def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_l
     merged_response = chat_with_gpt(merge_messages)
     debug_print("Responses merged successfully")
     return merged_response
+
+def get_product_example(lens_type, vectorstore):
+    debug_print(f"Entering get_product_example() for lens type: {lens_type}")
+    query = f"Briefly name an example of a {lens_type} IOL product without recommending it. Use 10 words or less."
+    result, _ = query_knowledge_base(query, vectorstore)
+    debug_print(f"Product example retrieved: {result}")
+    return result if result else ""
+
+
+def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
+    debug_print(f"Entering process_query() with query: {query}")
+    # Check if this is the first response after user shares their lifestyle
+    if not st.session_state.show_lens_options:
+        st.session_state.show_lens_options = True
+        
+        # Thank the user for sharing lifestyle details
+        thank_you_response = f"Thank you for sharing those details about your lifestyle, {st.session_state.user_name}. It's really helpful to understand your daily activities and visual needs."
+        
+        # Add message about cataract surgery and ask if they want to know more about IOLs
+        cataract_message = "I understand that cataract surgery can feel overwhelming, but don't worry – we'll take it step by step together. Would you like to know more about intraocular lenses (IOLs) before we look at the options your surgeon has suggested for you?"
+        
+        return f"{thank_you_response}\n\n{cataract_message}\n\n1. Yes, tell me more about IOLs\n2. No, show me the lens options"
+
+    # Check if the user wants to know more about IOLs
+    if query.lower() in ["1", "yes", "yes, tell me more about iols"]:
+        iols_explanation = chat_with_gpt([
+            {"role": "system", "content": "You are an AI assistant explaining IOLs to a patient."},
+            {"role": "user", "content": f"Explain what intraocular lenses (IOLs) are, relating the explanation to this lifestyle: {user_lifestyle}"}
+        ])
+        
+        lens_descriptions = []
+        for lens in prioritized_lenses:
+            description = get_lens_description(lens, user_lifestyle)
+            if description:
+                lens_descriptions.append(f"- {lens}: {description}")
+        
+        response = f"{iols_explanation}\n\nBased on your lifestyle and visual needs, Dr. {st.session_state.doctor_name} has suggested the following lenses for you:\n\n"
+        response += "\n\n".join(lens_descriptions)
+        response += "\n\nWhich lens would you like to know more about?"
+        
+        return response
+    
+    elif query.lower() in ["2", "no", "no, show me the lens options"]:
+        lens_descriptions = []
+        for lens in prioritized_lenses:
+            description = get_lens_description(lens, user_lifestyle)
+            if description:
+                lens_descriptions.append(f"- {lens}: {description}")
+        
+        response = f"Certainly! Dr. {st.session_state.doctor_name} has suggested the following lenses based on your lifestyle and visual needs:\n\n"
+        response += "\n\n".join(lens_descriptions)
+        response += "\n\nWhich lens would you like to know more about?"
+        
+        return response
+    
+    # For all other queries, use the existing logic
+    return process_query_existing(query, vectorstore, user_lifestyle, prioritized_lenses)
 
 def get_lens_description(lens_name, user_lifestyle):
     debug_print(f"Entering get_lens_description() for lens: {lens_name}")
@@ -427,111 +440,111 @@ def main():
     
     # Set the theme to light mode and add custom sidebar styling
     st.markdown("""
-            <style>
-            /* Root variables */
-            :root {
-                --secondary-background-color: #f0f2f6;
-            }
-            [data-testid="stSidebar"] [data-testid="stSidebarNav"] button[kind="header"] {
-                 color: white !important;
-            }
-            /* Sidebar styling */
-            [data-testid=stSidebar] {
-                background-color: #092247;
-            }
-            .sidebar .sidebar-content {
-                color: white;
-            }
-            .sidebar .sidebar-content .block-container {
-                padding-top: 1rem;
-            }
-            [data-testid=stSidebar] [data-testid=stText],
-            [data-testid=stSidebar] [data-testid=stMarkdown] p {
-                color: white !important;
-            }
+        <style>
+        /* Root variables */
+        :root {
+            --secondary-background-color: #f0f2f6;
+        }
+        [data-testid="stSidebar"] [data-testid="stSidebarNav"] button[kind="header"] {
+             color: white !important;
+        }
+        /* Sidebar styling */
+        [data-testid=stSidebar] {
+            background-color: #092247;
+        }
+        .sidebar .sidebar-content {
+            color: white;
+        }
+        .sidebar .sidebar-content .block-container {
+            padding-top: 1rem;
+        }
+        [data-testid=stSidebar] [data-testid=stText],
+        [data-testid=stSidebar] [data-testid=stMarkdown] p {
+            color: white !important;
+        }
 
-            /* File uploader styling */
-            [data-testid="stFileUploader"] {
-                margin-top: -2rem;
-            }
-            [data-testid="stFileUploader"] > label {
-                color: white !important;
-            }
-            [data-testid="stFileUploader"] > div > div {
-                background-color: white !important;
-                border-radius: 5px !important;
-            }
-            [data-testid="stFileUploadDropzone"] {
-                min-height: 100px !important;
-            }
-            [data-testid="stFileUploadDropzone"] button {
-                background-color: #ffffff !important;
-                color: #000000 !important;
-                border: 1px solid #cccccc !important;
-            }
+        /* File uploader styling */
+        [data-testid="stFileUploader"] {
+            margin-top: -2rem;
+        }
+        [data-testid="stFileUploader"] > label {
+            color: white !important;
+        }
+        [data-testid="stFileUploader"] > div > div {
+            background-color: white !important;
+            border-radius: 5px !important;
+        }
+        [data-testid="stFileUploadDropzone"] {
+            min-height: 100px !important;
+        }
+        [data-testid="stFileUploadDropzone"] button {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            border: 1px solid #cccccc !important;
+        }
 
-            /* Chat bubble styling */
-            .chat-bubble {
-                padding: 10px 15px;
-                border-radius: 20px;
-                margin-bottom: 10px;
-                display: inline-block;
-                max-width: 70%;
-                word-wrap: break-word;
-            }
-            .bot-bubble {
-                background-color: #D3D3D3;
-                float: left;
-                clear: both;
-            }
-            .user-bubble {
-                background-color: #87CEFA;
-                float: right;
-                clear: both;
-            }
-            .debug-bubble {
-                background-color: #FFB6C1;
-                float: left;
-                clear: both;
-                font-style: italic;
-            }
-            .chat-container {
-                margin-bottom: 20px;
-            }
+        /* Chat bubble styling */
+        .chat-bubble {
+            padding: 10px 15px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+            display: inline-block;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .bot-bubble {
+            background-color: #D3D3D3;
+            float: left;
+            clear: both;
+        }
+        .user-bubble {
+            background-color: #87CEFA;
+            float: right;
+            clear: both;
+        }
+        .debug-bubble {
+            background-color: #FFB6C1;
+            float: left;
+            clear: both;
+            font-style: italic;
+        }
+        .chat-container {
+            margin-bottom: 20px;
+        }
 
-            /* Button styling */
-            .stButton > button {
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                padding: 10px 24px;
-                text-align: center;
-                text-decoration: none;
-                display: inline-block;
-                font-size: 16px;
-                margin: 4px 2px;
-                cursor: pointer;
-                border-radius: 5px;
-            }
-            /* Specific styling for End Conversation button */
-            form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button {
-                background-color: #FF4B4B !important; /* Red color */
-                color: white !important;
-            }
-            form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button:hover {
-                background-color: #D63E3E !important; /* Darker shade for hover */
-            }
-            form[data-testid="stForm"] > div > div:nth-child(1) .stButton > button {
-                background-color: #4CAF50 !important; /* Green color */
-            }
-         
-            /* Additional styling for sidebar elements if needed */
-            .sidebar-text {
-                color: white;
-                font-size: 1rem;
-                margin-bottom: 0.5rem;
-            }
-            </style>
+        /* Button styling */
+        .stButton > button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        /* Specific styling for End Conversation button */
+        form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button {
+            background-color: #FF4B4B !important; /* Red color */
+            color: white !important;
+        }
+        form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button:hover {
+            background-color: #D63E3E !important; /* Darker shade for hover */
+        }
+        form[data-testid="stForm"] > div > div:nth-child(1) .stButton > button {
+            background-color: #4CAF50 !important; /* Green color */
+        }
+     
+        /* Additional styling for sidebar elements if needed */
+        .sidebar-text {
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        </style>
     """, unsafe_allow_html=True)
 
     # Create a sidebar
@@ -541,7 +554,6 @@ def main():
         st.empty()
         st.sidebar.image("./easyiol.png", use_column_width=True)
         st.markdown("<p class='sidebar-text'>Please upload the file that was provided by your doctor</p>", unsafe_allow_html=True)
-
 
     # Initialize session state variables
     if 'messages' not in st.session_state:
@@ -678,28 +690,21 @@ def main():
                     
                     debug_print(f"Question count: {st.session_state.question_count}")
 
-                    if not st.session_state.show_lens_options:
-                        st.session_state.user_lifestyle = corrected_input
-                        bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+                    bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+
+                    if bot_response:
                         st.session_state.messages.append({"role": "assistant", "content": bot_response})
                         st.session_state.chat_history.append(("bot", bot_response))
-                        debug_print("Processed initial lifestyle query")
+
+                        # Check if it's time to display the follow-up prompt (5th question and every odd question after)
+                        if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
+                            follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
+                            st.session_state.messages.append({"role": "assistant", "content": follow_up})
+                            st.session_state.chat_history.append(("bot", follow_up))
+                            debug_print(f"Follow-up prompt added to chat history (Question {st.session_state.question_count})")
                     else:
-                        bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
-
-                        if bot_response:
-                            st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                            st.session_state.chat_history.append(("bot", bot_response))
-
-                            # Check if it's time to display the follow-up prompt (5th question and every odd question after)
-                            if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
-                                follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
-                                st.session_state.messages.append({"role": "assistant", "content": follow_up})
-                                st.session_state.chat_history.append(("bot", follow_up))
-                                debug_print(f"Follow-up prompt added to chat history (Question {st.session_state.question_count})")
-                        else:
-                            st.error("Sorry, I couldn't generate a response. Please try again.")
-                            debug_print("Failed to generate bot response")
+                        st.error("Sorry, I couldn't generate a response. Please try again.")
+                        debug_print("Failed to generate bot response")
 
                 # Increment the input key to force a reset of the input field
                 st.session_state.input_key += 1
