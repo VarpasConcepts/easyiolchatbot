@@ -507,117 +507,132 @@ def main():
     # Set the theme to light mode and add custom sidebar styling
     st.markdown("""
         <style>
-        /* Root variables */
-        :root {
-            --secondary-background-color: #f0f2f6;
-        }
-        [data-testid="stSidebar"] [data-testid="stSidebarNav"] button[kind="header"] {
-            color: white !important;
-        }
-        /* Sidebar styling */
-        [data-testid=stSidebar] {
-            background-color: #092247;
-        }
-        .sidebar .sidebar-content {
-            color: white;
-        }
-        .sidebar .sidebar-content .block-container {
-            padding-top: 1rem;
-        }
-        [data-testid=stSidebar] [data-testid=stText],
-        [data-testid=stSidebar] [data-testid=stMarkdown] p {
-            color: white !important;
-        }
+            /* Root variables */
+            :root {
+                --secondary-background-color: #f0f2f6;
+            }
 
-        /* File uploader styling */
-        [data-testid="stFileUploader"] {
-            margin-top: -2rem;
-        }
-        [data-testid="stFileUploader"] > label {
-            color: white !important;
-        }
-        [data-testid="stFileUploader"] > div > div {
-            background-color: white !important;
-            border-radius: 5px !important;
-        }
-        [data-testid="stFileUploadDropzone"] {
-            min-height: 100px !important;
-        }
-        [data-testid="stFileUploadDropzone"] button {
-            background-color: #ffffff !important;
-            color: #000000 !important;
-            border: 1px solid #cccccc !important;
-        }
+            [data-testid="stSidebar"] [data-testid="stSidebarNav"] button[kind="header"] {
+                color: white !important;
+            }
 
-        /* Chat bubble styling */
-        .chat-bubble {
-            padding: 10px 15px;
-            border-radius: 20px;
-            margin-bottom: 10px;
-            display: inline-block;
-            max-width: 70%;
-            word-wrap: break-word;
-        }
-        .bot-bubble {
-            background-color: #D3D3D3;
-            float: left;
-            clear: both;
-        }
-        .user-bubble {
-            background-color: #87CEFA;
-            float: right;
-            clear: both;
-        }
-        .debug-bubble {
-            background-color: #FFB6C1;
-            float: left;
-            clear: both;
-            font-style: italic;
-        }
-        .chat-container {
-            margin-bottom: 20px;
-        }
+            /* Sidebar styling */
+            [data-testid=stSidebar] {
+                background-color: #092247;
+            }
 
-        .stButton > button {
-            color: white;
-            border: none;
-            padding: 10px 24px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 5px;
-        }
+            .sidebar .sidebar-content {
+                color: white;
+            }
 
-        /* "Yes, tell me more about IOLs" button */
-        .stButton > button:nth-of-type(1) {
-            background-color: #4CAF50 !important; /* Green */
-        }
+            .sidebar .sidebar-content .block-container {
+                padding-top: 1rem;
+            }
 
-        /* "No, show me the lens options" button */
-        .stButton > button:nth-of-type(2) {
-            background-color: #FF4B4B !important; /* Red */
-        }
+            [data-testid=stSidebar] [data-testid=stText],
+            [data-testid=stSidebar] [data-testid=stMarkdown] p {
+                color: white !important;
+            }
 
-        /* End Conversation button */
-        form[data-testid="stForm"] .stButton > button {
-            background-color: #FF4B4B !important; /* Red */
-        }
+            /* File uploader styling */
+            [data-testid="stFileUploader"] {
+                margin-top: -2rem;
+            }
 
-        /* Hover effects */
-        .stButton > button:hover {
-            opacity: 0.8;
-        }
-                        
-        /* Additional styling for sidebar elements if needed */
-        .sidebar-text {
-            color: white;
-            font-size: 1rem;
-            margin-bottom: 0.5rem;
-        }
+            [data-testid="stFileUploader"] > label {
+                color: white !important;
+            }
+
+            [data-testid="stFileUploader"] > div > div {
+                background-color: white !important;
+                border-radius: 5px !important;
+            }
+
+            [data-testid="stFileUploadDropzone"] {
+                min-height: 100px !important;
+            }
+
+            [data-testid="stFileUploadDropzone"] button {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                border: 1px solid #cccccc !important;
+            }
+
+            /* Chat bubble styling */
+            .chat-bubble {
+                padding: 10px 15px;
+                border-radius: 20px;
+                margin-bottom: 10px;
+                display: inline-block;
+                max-width: 70%;
+                word-wrap: break-word;
+            }
+
+            .bot-bubble {
+                background-color: #D3D3D3;
+                float: left;
+                clear: both;
+            }
+
+            .user-bubble {
+                background-color: #87CEFA;
+                float: right;
+                clear: both;
+            }
+
+            .debug-bubble {
+                background-color: #FFB6C1;
+                float: left;
+                clear: both;
+                font-style: italic;
+            }
+
+            .chat-container {
+                margin-bottom: 20px;
+            }
+
+            /* Button styling */
+            .stButton > button {
+                color: white;
+                border: none;
+                padding: 10px 24px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+                border-radius: 5px;
+            }
+
+            /* "Yes, tell me more about IOLs" button (Green) */
+            div.row-widget.stButton:first-of-type button {
+                background-color: #4CAF50 !important; /* Green */
+            }
+
+            /* "No, show me the lens options" button (Red) */
+            div.row-widget.stButton:nth-of-type(2) button {
+                background-color: #FF4B4B !important; /* Red */
+            }
+
+            /* End Conversation button (Red) */
+            div.stForm div.stButton button {
+                background-color: #FF4B4B !important; /* Red */
+            }
+
+            /* Hover effects */
+            .stButton > button:hover {
+                opacity: 0.8;
+            }
+
+            /* Additional styling for sidebar elements if needed */
+            .sidebar-text {
+                color: white;
+                font-size: 1rem;
+                margin-bottom: 0.5rem;
+            }
         </style>
+
     """, unsafe_allow_html=True)
 
     # Create a sidebar
