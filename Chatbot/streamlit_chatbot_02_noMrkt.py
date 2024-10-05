@@ -440,6 +440,62 @@ def get_binary_file_downloader_html(bin_file, file_label='File'):
     debug_print("Download link created")
     return href
 
+def process_user_input(user_input, vectorstore):
+    debug_print(f"Processing user input: {user_input}")
+    with st.spinner("Processing your input..."):
+        corrected_input = fix_spelling(user_input)
+        debug_print(f"Corrected input: {corrected_input}")
+        
+        st.session_state.messages.append({"role": "user", "content": corrected_input})
+        st.session_state.chat_history.append(("user", corrected_input))
+        st.session_state.question_count += 1
+        
+        debug_print(f"Question count: {st.session_state.question_count}")
+
+        bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+
+        if bot_response == "SHOW_BUTTONS" or bot_response == "WAIT_FOR_LENS_CHOICE":
+            st.experimental_rerun()
+        elif bot_response:
+            st.session_state.messages.append({"role": "assistant", "content": bot_response})
+            st.session_state.chat_history.append(("bot", bot_response))
+
+            if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
+                follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
+                st.session_state.messages.append({"role": "assistant", "content": follow_up})
+                st.session_state.chat_history.append(("bot", follow_up))
+                debug_print(f"Follow-up prompt added to chat history (Question {st.session_state.question_count})")
+        else:
+            st.error("Sorry, I couldn't generate a response. Please try again.")
+            debug_print("Failed to generate bot response")
+
+    st.session_state.input_key += 1
+    st.experimental_rerun()
+
+def end_conversation():
+    debug_print("End conversation button clicked")
+    with st.spinner("Generating conversation summary..."):
+        chat_history_text = "\n".join([f"{role}: {message}" for role, message in st.session_state.chat_history])
+        summary = generate_summary(chat_history_text)
+        
+        pdf_content = create_pdf(st.session_state.chat_history, summary)
+        
+        st.markdown(get_binary_file_downloader_html(pdf_content, 'IOL_Consultation_Summary'), unsafe_allow_html=True)
+        
+        st.session_state.messages = []
+        st.session_state.chat_history = []
+        st.session_state.user_lifestyle = ""
+        st.session_state.show_lens_options = False
+        st.session_state.greeted = False
+        st.session_state.asked_name = False
+        st.session_state.user_name = ""
+        st.session_state.question_count = 0
+        st.session_state.input_key = 0
+        
+        st.success("Thank you for your time. Your consultation summary is ready for download.")
+        debug_print("Conversation ended, summary generated, and state reset")
+
+
 def main():
     st.set_page_config(
         page_title="EasyIOLChat",
@@ -657,36 +713,35 @@ def main():
                 
                 submit_button = st.form_submit_button("Submit")
 
-            if submit_button or (first_name and last_name):  # This allows both button click and Enter key to submit
-                if first_name and last_name:
-                    st.session_state.user_name = f"{first_name} {last_name}"
-                    
-                    # Add the user's name to the chat history
-                    st.session_state.messages.append({"role": "user", "content": st.session_state.user_name})
-                    st.session_state.chat_history.append(("user", st.session_state.user_name))
-                    
-                    bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
-                    st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                    st.session_state.chat_history.append(("bot", bot_response))
-                    
-                    lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
-                    st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
-                    st.session_state.chat_history.append(("bot", lifestyle_question))
-                    debug_print(f"User name set and added to chat history: {st.session_state.user_name}")
-                    st.session_state.asked_name = False
-                    st.experimental_rerun()  # Force a rerun to update the UI
-                else:
-                    st.warning("Please enter both your first and last name.")
+            if submit_button and first_name and last_name:
+                st.session_state.user_name = f"{first_name} {last_name}"
+                
+                # Add the user's name to the chat history
+                st.session_state.messages.append({"role": "user", "content": st.session_state.user_name})
+                st.session_state.chat_history.append(("user", st.session_state.user_name))
+                
+                bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
+                st.session_state.messages.append({"role": "assistant", "content": bot_response})
+                st.session_state.chat_history.append(("bot", bot_response))
+                
+                lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
+                st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
+                st.session_state.chat_history.append(("bot", lifestyle_question))
+                debug_print(f"User name set and added to chat history: {st.session_state.user_name}")
+                st.session_state.asked_name = False
+                st.experimental_rerun()  # Force a rerun to update the UI
+            elif submit_button:
+                st.warning("Please enter both your first and last name.")
         else:
             # Check if we need to show the Yes/No buttons
             if st.session_state.show_lens_options and st.session_state.chat_history[-1][1].endswith("suggested for you?"):
                 col1, col2 = st.columns(2)
                 with col1:
                     if st.button("Yes, tell me more about IOLs"):
-                        user_input = "yes"
+                        process_user_input("yes", vectorstore)
                 with col2:
                     if st.button("No, show me the lens options"):
-                        user_input = "no"
+                        process_user_input("no", vectorstore)
             else:
                 with st.form(key='message_form'):
                     user_input = st.text_input("You:", key=f"user_input_{st.session_state.input_key}")
@@ -696,69 +751,11 @@ def main():
                     with col2:
                         end_conversation_button = st.form_submit_button(label='End Conversation')
 
-            if 'user_input' in locals() and user_input:
-                debug_print(f"Processing user input: {user_input}")
-                with st.spinner("Processing your input..."):
-                    # Apply spell-checking in the background
-                    corrected_input = fix_spelling(user_input)
-                    debug_print(f"Corrected input: {corrected_input}")
-                    
-                    st.session_state.messages.append({"role": "user", "content": corrected_input})
-                    st.session_state.chat_history.append(("user", corrected_input))
-                    st.session_state.question_count += 1
-                    
-                    debug_print(f"Question count: {st.session_state.question_count}")
+                if submit_button and user_input:
+                    process_user_input(user_input, vectorstore)
+                elif end_conversation_button:
+                    end_conversation()
 
-                    bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
-
-                    if bot_response == "SHOW_BUTTONS":
-                        st.experimental_rerun()
-                    elif bot_response == "WAIT_FOR_LENS_CHOICE":
-                        st.experimental_rerun()
-                    elif bot_response:
-                        st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                        st.session_state.chat_history.append(("bot", bot_response))
-
-                        # Check if it's time to display the follow-up prompt (5th question and every odd question after)
-                        if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
-                            follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
-                            st.session_state.messages.append({"role": "assistant", "content": follow_up})
-                            st.session_state.chat_history.append(("bot", follow_up))
-                            debug_print(f"Follow-up prompt added to chat history (Question {st.session_state.question_count})")
-                    else:
-                        st.error("Sorry, I couldn't generate a response. Please try again.")
-                        debug_print("Failed to generate bot response")
-
-                # Increment the input key to force a reset of the input field
-                st.session_state.input_key += 1
-                st.experimental_rerun()
-
-            if end_conversation_button:
-                debug_print("End conversation button clicked")
-                with st.spinner("Generating conversation summary..."):
-                    # Generate summary
-                    chat_history_text = "\n".join([f"{role}: {message}" for role, message in st.session_state.chat_history])
-                    summary = generate_summary(chat_history_text)
-                    
-                    # Create PDF
-                    pdf_content = create_pdf(st.session_state.chat_history, summary)
-                    
-                    # Provide download link
-                    st.markdown(get_binary_file_downloader_html(pdf_content, 'IOL_Consultation_Summary'), unsafe_allow_html=True)
-                    
-                    # Clear conversation state
-                    st.session_state.messages = []
-                    st.session_state.chat_history = []
-                    st.session_state.user_lifestyle = ""
-                    st.session_state.show_lens_options = False
-                    st.session_state.greeted = False
-                    st.session_state.asked_name = False
-                    st.session_state.user_name = ""
-                    st.session_state.question_count = 0
-                    st.session_state.input_key = 0
-                    
-                    st.success("Thank you for your time. Your consultation summary is ready for download.")
-                    debug_print("Conversation ended, summary generated, and state reset")
 
 if __name__ == "__main__":
     main()
