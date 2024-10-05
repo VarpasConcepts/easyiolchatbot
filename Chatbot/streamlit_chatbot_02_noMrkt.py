@@ -600,7 +600,18 @@ def main():
         form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button:hover {
             background-color: #D63E3E !important; /* Darker shade for hover */
         }
-        form[data-testid="stForm"] > div > div:nth-child(1) .stButton > button {
+
+        /* Specific styling for "No, show me the lens options" button */
+        form[data-testid="stForm"] > div > div:nth-child(1) .stButton:nth-child(2) > button {
+            background-color: #FF4B4B !important; /* Red color */
+            color: white !important;
+        }
+        form[data-testid="stForm"] > div > div:nth-child(1) .stButton:nth-child(2) > button:hover {
+            background-color: #D63E3E !important; /* Darker shade for hover */
+        }
+
+        /* Keep the "Yes, tell me more about IOLs" button green */
+        form[data-testid="stForm"] > div > div:nth-child(1) .stButton:nth-child(1) > button {
             background-color: #4CAF50 !important; /* Green color */
         }
      
