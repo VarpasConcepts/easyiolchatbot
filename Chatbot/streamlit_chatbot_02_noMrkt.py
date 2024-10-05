@@ -593,16 +593,16 @@ def main():
 
             /* Button styling */
             .stButton > button {
-                color: white;
-                border: none;
-                padding: 10px 24px;
-                text-align: center;
-                text-decoration: none;
-                display: inline-block;
-                font-size: 16px;
-                margin: 4px 2px;
-                cursor: pointer;
-                border-radius: 5px;
+                color: white !important;
+                border: none !important;
+                padding: 10px 24px !important;
+                text-align: center !important;
+                text-decoration: none !important;
+                display: inline-block !important;
+                font-size: 16px !important;
+                margin: 4px 2px !important;
+                cursor: pointer !important;
+                border-radius: 5px !important;
             }
 
             /* "Yes, tell me more about IOLs" button (Green) */
@@ -623,7 +623,24 @@ def main():
 
             /* Hover effects */
             .stButton > button:hover {
-                opacity: 0.8;
+                opacity: 0.8 !important;
+            }
+
+            /* Ensure secondary buttons also get the red color */
+            div.row-widget.stButton button[data-testid="baseButton-secondaryFormSubmit"] {
+                background-color: #FF4B4B !important; /* Red for secondary button */
+                color: white !important; /* White text */
+                border: none !important;
+                border-radius: 5px !important;
+                padding: 10px 24px !important;
+                text-align: center !important;
+                cursor: pointer !important;
+            }
+
+            /* Fix for overriding container styles that may affect button layout */
+            div.row-widget.stButton {
+                display: flex;
+                justify-content: flex-start !important;
             }
 
             /* Additional styling for sidebar elements if needed */
@@ -633,6 +650,7 @@ def main():
                 margin-bottom: 0.5rem;
             }
         </style>
+
 
     """, unsafe_allow_html=True)
 
