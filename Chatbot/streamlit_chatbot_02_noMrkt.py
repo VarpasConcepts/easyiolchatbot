@@ -578,9 +578,7 @@ def main():
             margin-bottom: 20px;
         }
 
-        /* Button styling */
         .stButton > button {
-            background-color: #4CAF50;
             color: white;
             border: none;
             padding: 10px 24px;
@@ -592,34 +590,27 @@ def main():
             cursor: pointer;
             border-radius: 5px;
         }
-        /* Specific styling for "No, show me the lens options" button */
-        .stButton > button:contains("No, show me the lens options"),
-        div[data-testid="column"]:nth-child(2) .stButton > button {
-            background-color: #FF4B4B !important; /* Red color */
-            color: white !important;
-        }
-        .stButton > button:contains("No, show me the lens options"):hover,
-        div[data-testid="column"]:nth-child(2) .stButton > button:hover {
-            background-color: #D63E3E !important; /* Darker shade for hover */
+
+        /* "Yes, tell me more about IOLs" button */
+        .stButton > button:nth-of-type(1) {
+            background-color: #4CAF50 !important; /* Green */
         }
 
-        /* Specific styling for End Conversation button */
-        form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button,
-        .stButton > button:contains("End Conversation") {
-            background-color: #FF4B4B !important; /* Red color */
-            color: white !important;
-        }
-        form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button:hover,
-        .stButton > button:contains("End Conversation"):hover {
-            background-color: #D63E3E !important; /* Darker shade for hover */
+        /* "No, show me the lens options" button */
+        .stButton > button:nth-of-type(2) {
+            background-color: #FF4B4B !important; /* Red */
         }
 
-        /* Keep the "Yes, tell me more about IOLs" button green */
-        .stButton > button:contains("Yes, tell me more about IOLs"),
-        div[data-testid="column"]:nth-child(1) .stButton > button {
-            background-color: #4CAF50 !important; /* Green color */
+        /* End Conversation button */
+        form[data-testid="stForm"] .stButton > button {
+            background-color: #FF4B4B !important; /* Red */
         }
-                
+
+        /* Hover effects */
+        .stButton > button:hover {
+            opacity: 0.8;
+        }
+                        
         /* Additional styling for sidebar elements if needed */
         .sidebar-text {
             color: white;
