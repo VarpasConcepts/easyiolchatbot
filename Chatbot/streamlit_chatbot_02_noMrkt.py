@@ -592,29 +592,34 @@ def main():
             cursor: pointer;
             border-radius: 5px;
         }
-        /* Specific styling for End Conversation button */
-        form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button {
+        /* Specific styling for "No, show me the lens options" button */
+        .stButton > button:contains("No, show me the lens options"),
+        div[data-testid="column"]:nth-child(2) .stButton > button {
             background-color: #FF4B4B !important; /* Red color */
             color: white !important;
         }
-        form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button:hover {
+        .stButton > button:contains("No, show me the lens options"):hover,
+        div[data-testid="column"]:nth-child(2) .stButton > button:hover {
             background-color: #D63E3E !important; /* Darker shade for hover */
         }
 
-        /* Specific styling for "No, show me the lens options" button */
-        form[data-testid="stForm"] > div > div:nth-child(1) .stButton:nth-child(2) > button {
+        /* Specific styling for End Conversation button */
+        form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button,
+        .stButton > button:contains("End Conversation") {
             background-color: #FF4B4B !important; /* Red color */
             color: white !important;
         }
-        form[data-testid="stForm"] > div > div:nth-child(1) .stButton:nth-child(2) > button:hover {
+        form[data-testid="stForm"] > div > div:nth-child(2) .stButton > button:hover,
+        .stButton > button:contains("End Conversation"):hover {
             background-color: #D63E3E !important; /* Darker shade for hover */
         }
 
         /* Keep the "Yes, tell me more about IOLs" button green */
-        form[data-testid="stForm"] > div > div:nth-child(1) .stButton:nth-child(1) > button {
+        .stButton > button:contains("Yes, tell me more about IOLs"),
+        div[data-testid="column"]:nth-child(1) .stButton > button {
             background-color: #4CAF50 !important; /* Green color */
         }
-     
+                
         /* Additional styling for sidebar elements if needed */
         .sidebar-text {
             color: white;
