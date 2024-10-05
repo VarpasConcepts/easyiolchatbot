@@ -94,7 +94,7 @@ def chat_with_gpt(messages):
         messages.insert(0, system_message)
         
         response = client.chat.completions.create(
-            model="gpt-4-mini",
+            model="gpt-4o-mini",
             messages=messages,
             temperature=0.7  # Slightly increase randomness to encourage varied, concise responses
         )
@@ -248,7 +248,6 @@ def get_product_example(lens_type, vectorstore):
     result, _ = query_knowledge_base(query, vectorstore)
     debug_print(f"Product example retrieved: {result}")
     return result if result else ""
-
 
 def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
     debug_print(f"Entering process_query() with query: {query}")
