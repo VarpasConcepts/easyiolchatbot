@@ -615,9 +615,10 @@ def main():
                 background-color: #FF4B4B !important; /* Red */
             }
 
-            /* End Conversation button (Red) */
-            div.stForm div.stButton button {
+            /* Specifically targeting the "End Conversation" button */
+            div.row-widget.stButton.st-emotion-cache-k008qs button {
                 background-color: #FF4B4B !important; /* Red */
+                color: white !important;
             }
 
             /* Hover effects */
