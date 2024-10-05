@@ -512,7 +512,7 @@ def main():
             --secondary-background-color: #f0f2f6;
         }
         [data-testid="stSidebar"] [data-testid="stSidebarNav"] button[kind="header"] {
-             color: white !important;
+            color: white !important;
         }
         /* Sidebar styling */
         [data-testid=stSidebar] {
