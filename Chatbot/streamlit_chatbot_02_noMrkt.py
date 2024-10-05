@@ -621,20 +621,15 @@ def main():
                 color: white !important;
             }
 
+            /* Ensure the Send button retains its original style */
+            div.row-widget.stButton button:not(.st-emotion-cache-k008qs) {
+                background-color: #007bff !important; /* Default Send button color (change as needed) */
+                color: white !important; /* White text for Send button */
+            }
+
             /* Hover effects */
             .stButton > button:hover {
                 opacity: 0.8 !important;
-            }
-
-            /* Ensure secondary buttons also get the red color */
-            div.row-widget.stButton button[data-testid="baseButton-secondaryFormSubmit"] {
-                background-color: #FF4B4B !important; /* Red for secondary button */
-                color: white !important; /* White text */
-                border: none !important;
-                border-radius: 5px !important;
-                padding: 10px 24px !important;
-                text-align: center !important;
-                cursor: pointer !important;
             }
 
             /* Fix for overriding container styles that may affect button layout */
@@ -650,7 +645,6 @@ def main():
                 margin-bottom: 0.5rem;
             }
         </style>
-
 
     """, unsafe_allow_html=True)
 
