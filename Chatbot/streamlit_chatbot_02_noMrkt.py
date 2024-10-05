@@ -417,6 +417,21 @@ def get_binary_file_downloader_html(bin_file, file_label='File'):
     debug_print("Download link created")
     return href
 
+def load_css():
+    try:
+        # Try to load from the current directory
+        css_file = "styles.css"
+        if not os.path.exists(css_file):
+            # If not found, try to load from the .streamlit folder
+            css_file = os.path.join(".streamlit", "styles.css")
+        
+        if os.path.exists(css_file):
+            with open(css_file) as f:
+                st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+        else:
+            st.warning("CSS file not found. The app may not appear as intended.")
+    except Exception as e:
+        st.error(f"An error occurred while loading the CSS: {str(e)}")
 
 def main():
     st.set_page_config(
@@ -425,10 +440,10 @@ def main():
         initial_sidebar_state="expanded",
         menu_items=None
     )
+
+    load_css()
     
     # Load and apply the external CSS
-    with open('styles.css') as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
     # Create a sidebar
     with st.sidebar:
