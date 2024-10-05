@@ -417,6 +417,7 @@ def get_binary_file_downloader_html(bin_file, file_label='File'):
     debug_print("Download link created")
     return href
 
+
 def main():
     st.set_page_config(
         page_title="EasyIOLChat",
