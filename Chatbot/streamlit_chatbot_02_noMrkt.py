@@ -259,44 +259,55 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         thank_you_response = f"Thank you for sharing those details about your lifestyle, {st.session_state.user_name}. It's really helpful to understand your daily activities and visual needs."
         
         # Add message about cataract surgery and ask if they want to know more about IOLs
-        cataract_message = "I understand that cataract surgery can feel overwhelming, but don't worry – we'll take it step by step together. Would you like to know more about intraocular lenses (IOLs) before we look at the options your surgeon has suggested for you?"
+        cataract_message = "I understand that cataract surgery can feel overwhelming, but don't worry - we'll take it step by step together. Would you like to know more about intraocular lenses (IOLs) before we look at the options your surgeon has suggested for you?"
         
-        return f"{thank_you_response}\n\n{cataract_message}\n\n1. Yes, tell me more about IOLs\n2. No, show me the lens options"
+        st.session_state.messages.append({"role": "assistant", "content": thank_you_response})
+        st.session_state.chat_history.append(("bot", thank_you_response))
+        
+        st.session_state.messages.append({"role": "assistant", "content": cataract_message})
+        st.session_state.chat_history.append(("bot", cataract_message))
+        
+        return "SHOW_BUTTONS"
 
     # Check if the user wants to know more about IOLs
-    if query.lower() in ["1", "yes", "yes, tell me more about iols"]:
+    if query.lower() == "yes":
         iols_explanation = chat_with_gpt([
             {"role": "system", "content": "You are an AI assistant explaining IOLs to a patient."},
             {"role": "user", "content": f"Explain what intraocular lenses (IOLs) are, relating the explanation to this lifestyle: {user_lifestyle}"}
         ])
         
-        lens_descriptions = []
+        st.session_state.messages.append({"role": "assistant", "content": iols_explanation})
+        st.session_state.chat_history.append(("bot", iols_explanation))
+        
+        # Separate message for lens suggestions
+        lens_suggestions = "Based on your lifestyle and visual needs, Dr. " + st.session_state.doctor_name + " has suggested the following lenses for you:\n\n"
         for lens in prioritized_lenses:
             description = get_lens_description(lens, user_lifestyle)
             if description:
-                lens_descriptions.append(f"- {lens}: {description}")
+                lens_suggestions += f"• {lens}: {description}\n\n"
+        lens_suggestions += "Which lens would you like to know more about?"
         
-        response = f"{iols_explanation}\n\nBased on your lifestyle and visual needs, Dr. {st.session_state.doctor_name} has suggested the following lenses for you:\n\n"
-        response += "\n\n".join(lens_descriptions)
-        response += "\n\nWhich lens would you like to know more about?"
+        st.session_state.messages.append({"role": "assistant", "content": lens_suggestions})
+        st.session_state.chat_history.append(("bot", lens_suggestions))
         
-        return response
+        return "WAIT_FOR_LENS_CHOICE"
     
-    elif query.lower() in ["2", "no", "no, show me the lens options"]:
-        lens_descriptions = []
+    elif query.lower() == "no":
+        lens_suggestions = "Certainly! Dr. " + st.session_state.doctor_name + " has suggested the following lenses based on your lifestyle and visual needs:\n\n"
         for lens in prioritized_lenses:
             description = get_lens_description(lens, user_lifestyle)
             if description:
-                lens_descriptions.append(f"- {lens}: {description}")
+                lens_suggestions += f"• {lens}: {description}\n\n"
+        lens_suggestions += "Which lens would you like to know more about?"
         
-        response = f"Certainly! Dr. {st.session_state.doctor_name} has suggested the following lenses based on your lifestyle and visual needs:\n\n"
-        response += "\n\n".join(lens_descriptions)
-        response += "\n\nWhich lens would you like to know more about?"
+        st.session_state.messages.append({"role": "assistant", "content": lens_suggestions})
+        st.session_state.chat_history.append(("bot", lens_suggestions))
         
-        return response
+        return "WAIT_FOR_LENS_CHOICE"
     
     # For all other queries, use the existing logic
     return process_query_existing(query, vectorstore, user_lifestyle, prioritized_lenses)
+
 
 def get_lens_description(lens_name, user_lifestyle):
     debug_print(f"Entering get_lens_description() for lens: {lens_name}")
@@ -667,16 +678,25 @@ def main():
                 else:
                     st.warning("Please enter both your first and last name.")
         else:
-            with st.form(key='message_form'):
-                # Use a unique key for the text input field
-                user_input = st.text_input("You:", key=f"user_input_{st.session_state.input_key}")
-                col1, col2 = st.columns([3, 1])
+            # Check if we need to show the Yes/No buttons
+            if st.session_state.show_lens_options and st.session_state.chat_history[-1][1].endswith("suggested for you?"):
+                col1, col2 = st.columns(2)
                 with col1:
-                    submit_button = st.form_submit_button(label='Send')
+                    if st.button("Yes, tell me more about IOLs"):
+                        user_input = "yes"
                 with col2:
-                    end_conversation_button = st.form_submit_button(label='End Conversation')
+                    if st.button("No, show me the lens options"):
+                        user_input = "no"
+            else:
+                with st.form(key='message_form'):
+                    user_input = st.text_input("You:", key=f"user_input_{st.session_state.input_key}")
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        submit_button = st.form_submit_button(label='Send')
+                    with col2:
+                        end_conversation_button = st.form_submit_button(label='End Conversation')
 
-            if submit_button and user_input:
+            if 'user_input' in locals() and user_input:
                 debug_print(f"Processing user input: {user_input}")
                 with st.spinner("Processing your input..."):
                     # Apply spell-checking in the background
@@ -691,7 +711,11 @@ def main():
 
                     bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
 
-                    if bot_response:
+                    if bot_response == "SHOW_BUTTONS":
+                        st.experimental_rerun()
+                    elif bot_response == "WAIT_FOR_LENS_CHOICE":
+                        st.experimental_rerun()
+                    elif bot_response:
                         st.session_state.messages.append({"role": "assistant", "content": bot_response})
                         st.session_state.chat_history.append(("bot", bot_response))
 
