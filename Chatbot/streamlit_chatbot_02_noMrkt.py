@@ -590,25 +590,11 @@ def main():
             cursor: pointer;
             border-radius: 5px;
         }
-
-        /* "Yes, tell me more about IOLs" button */
-        .stButton > button:nth-of-type(1) {
-            background-color: #4CAF50 !important; /* Green */
-        }
-
-        /* "No, show me the lens options" button */
-        .stButton > button:nth-of-type(2) {
-            background-color: #FF4B4B !important; /* Red */
-        }
-
-        /* End Conversation button */
         form[data-testid="stForm"] .stButton > button {
             background-color: #FF4B4B !important; /* Red */
         }
-
-        /* Hover effects */
-        .stButton > button:hover {
-            opacity: 0.8;
+        .stButton > button:nth-of-type(2) {
+            background-color: #FF4B4B !important; /* Red */
         }
                         
         /* Additional styling for sidebar elements if needed */
