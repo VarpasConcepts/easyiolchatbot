@@ -280,7 +280,7 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         st.session_state.chat_history.append(("bot", iols_explanation))
         
         # Separate message for lens suggestions
-        lens_suggestions = "Based on your lifestyle and visual needs, Dr. " + st.session_state.doctor_name + " has suggested the following lenses for you:\n\n"
+        lens_suggestions = "Based on your lifestyle and visual needs," + st.session_state.doctor_name + " has suggested the following lenses for you:\n\n"
         for lens in prioritized_lenses:
             description = get_lens_description(lens, user_lifestyle)
             if description:
@@ -293,7 +293,7 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         return "WAIT_FOR_LENS_CHOICE"
     
     elif query.lower() == "no":
-        lens_suggestions = "Certainly! Dr. " + st.session_state.doctor_name + " has suggested the following lenses based on your lifestyle and visual needs:\n\n"
+        lens_suggestions = "Certainly!" + st.session_state.doctor_name + " has suggested the following lenses based on your lifestyle and visual needs:\n\n"
         for lens in prioritized_lenses:
             description = get_lens_description(lens, user_lifestyle)
             if description:
