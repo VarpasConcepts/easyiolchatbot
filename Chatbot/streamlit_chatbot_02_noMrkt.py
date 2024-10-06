@@ -682,6 +682,29 @@ def main():
                 font-size: 1rem;
                 margin-bottom: 0.5rem;
             }
+                
+            /* Cross button styling */
+            .st-emotion-cache-ztfqz8 {
+                display: inline-flex;
+                -webkit-box-align: center;
+                align-items: center;
+                -webkit-box-pack: center;
+                justify-content: center;
+                font-weight: 400;
+                border-radius: 0.5rem;
+                margin: 0px 0.125rem;
+                color: white;
+                width: auto;
+                user-select: none;
+                background-color: transparent;
+                border: none;
+                padding: 0.5rem;
+                font-size: 14px;
+                line-height: 1;
+                min-width: 2rem;
+                min-height: 2rem;
+            }
+
         </style>
 
     """, unsafe_allow_html=True)
