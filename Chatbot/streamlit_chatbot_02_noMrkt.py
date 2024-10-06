@@ -467,7 +467,7 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
                               fontSize=10,
                               leading=14,
                               spaceBefore=6,
-                              spaceAfter=35,
+                              spaceAfter=30,
                               leftIndent=20,
                               rightIndent=20,
                               allowWidows=0,
