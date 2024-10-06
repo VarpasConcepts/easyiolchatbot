@@ -9,7 +9,7 @@ import time
 import base64
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
@@ -457,8 +457,9 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
                               backColor=colors.lightblue,
                               borderColor=colors.lightblue,
                               borderWidth=1,
-                              borderPadding=(5,5,5,5),
-                              borderRadius=10))
+                              borderPadding=(10,10,10,10),
+                              borderRadius=10,
+                              spaceAfter=20))
     styles.add(ParagraphStyle(name='BotBubble', 
                               alignment=TA_LEFT, 
                               textColor=colors.black,
@@ -467,8 +468,9 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
                               backColor=colors.lightgrey,
                               borderColor=colors.lightgrey,
                               borderWidth=1,
-                              borderPadding=(5,5,5,5),
-                              borderRadius=10))
+                              borderPadding=(10,10,10,10),
+                              borderRadius=10,
+                              spaceAfter=20))
 
     # Add title
     Story.append(Paragraph("IOL Consultation Summary", styles['Heading1']))
@@ -490,16 +492,18 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
     Story.append(Paragraph(summary, styles['Justify']))
     Story.append(Spacer(1, 12))
 
+    # Add page break before chat history
+    Story.append(PageBreak())
+
     # Add chat history
     Story.append(Paragraph("Detailed Conversation", styles['Heading2']))
-    Story.append(Spacer(1, 6))
+    Story.append(Spacer(1, 12))
     for role, message in chat_history:
         if role == "user":
             p = Paragraph(message, styles['UserBubble'])
         elif role == "bot":
             p = Paragraph(message, styles['BotBubble'])
         Story.append(p)
-        Story.append(Spacer(1, 6))
 
     doc.build(Story)
     pdf_content = buffer.getvalue()
