@@ -467,7 +467,7 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
                               fontSize=10,
                               leading=14,
                               spaceBefore=6,
-                              spaceAfter=12,
+                              spaceAfter=35,
                               leftIndent=20,
                               rightIndent=20,
                               allowWidows=0,
@@ -531,7 +531,6 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
     
     debug_print("PDF created successfully")
     return pdf_content
-
 
 def get_binary_file_downloader_html(bin_file, file_label='File'):
     debug_print("Entering get_binary_file_downloader_html()")
