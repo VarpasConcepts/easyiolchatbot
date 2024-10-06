@@ -56,16 +56,25 @@ def format_and_replace(text, doctor_name):
     # Add line breaks for better readability
     text = text.replace(". ", ".\n")
     
-    # Add bullet points to lists
+    # Improve bullet point handling
     lines = text.split('\n')
-    for i, line in enumerate(lines):
-        if line.strip().startswith(('-', '•')):
-            lines[i] = '  • ' + line.strip()[1:].strip()
+    formatted_lines = []
+    for line in lines:
+        if '•' in line:
+            # Split the line at each bullet point
+            bullet_points = line.split('•')
+            # Add each bullet point as a separate line
+            for point in bullet_points:
+                if point.strip():  # Ignore empty strings
+                    formatted_lines.append(f"  • {point.strip()}")
+        else:
+            formatted_lines.append(line)
     
     # Join the lines back together
-    text = '\n'.join(lines)
+    text = '\n'.join(formatted_lines)
     
     return text
+
 def process_response(response, doctor_name):
     formatted_response = format_and_replace(response, doctor_name)
     return formatted_response
