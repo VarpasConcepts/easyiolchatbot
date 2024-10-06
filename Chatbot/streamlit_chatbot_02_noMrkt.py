@@ -444,7 +444,8 @@ def format_text_for_pdf(text):
     formatted_lines = []
     for line in lines:
         if line.strip().startswith('•'):
-            formatted_lines.append(f"<bullet>&bull;</bullet>{line.strip()[1:]}")
+            # Remove the bullet point and add some indentation
+            formatted_lines.append(f"    {line.strip()[1:].strip()}")
         elif ':' in line and not line.strip().endswith(':'):
             parts = line.split(':', 1)
             formatted_lines.append(f"<b>{parts[0].strip()}:</b>{parts[1]}")
@@ -467,7 +468,8 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
                               leading=14,
                               spaceBefore=6,
                               spaceAfter=12,
-                              bulletIndent=20,
+                              leftIndent=20,
+                              rightIndent=20,
                               allowWidows=0,
                               allowOrphans=0))
     styles.add(ParagraphStyle(name='UserBubble', 
@@ -529,6 +531,7 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
     
     debug_print("PDF created successfully")
     return pdf_content
+
 
 def get_binary_file_downloader_html(bin_file, file_label='File'):
     debug_print("Entering get_binary_file_downloader_html()")
