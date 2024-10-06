@@ -12,6 +12,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_JUSTIFY
 from io import BytesIO
+import re
 
 # Add a debug flag
 DEBUG = False
@@ -44,7 +45,28 @@ def load_vectorstore():
         st.error("The FAISS index file is missing or cannot be accessed. Please check the file path and permissions.")
         debug_print(f"Error in load_vectorstore(): {e}")
         return None
+
+#Function for formatting and word replacement
+def format_and_replace(text, doctor_name):
+    # Replace doctor-related words with the actual doctor's name
+    doctor_words = ['doctor', 'surgeon', 'ophthalmologist']
+    for word in doctor_words:
+        text = re.sub(r'\b' + word + r'\b', doctor_name, text, flags=re.IGNORECASE)
     
+    # Add line breaks for better readability
+    text = text.replace(". ", ".\n")
+    
+    # Add bullet points to lists
+    lines = text.split('\n')
+    for i, line in enumerate(lines):
+        if line.strip().startswith(('-', '•')):
+            lines[i] = '  • ' + line.strip()[1:].strip()
+    
+    # Join the lines back together
+    text = '\n'.join(lines)
+    
+    return text
+
 def query_knowledge_base(query, vectorstore):
     debug_print(f"Entering query_knowledge_base() with query: {query}")
     if vectorstore is None:
@@ -122,7 +144,7 @@ def process_query_existing(query, vectorstore, user_lifestyle, prioritized_lense
         
         if len(lenses_to_compare) < 2:
             debug_print("Insufficient lenses for comparison")
-            return "I'm sorry, but I couldn't identify which specific lens types you want to compare. Could you please clarify which lens types you'd like me to compare?"
+            return format_and_replace("I'm sorry, but I couldn't identify which specific lens types you want to compare. Could you please clarify which lens types you'd like me to compare?", st.session_state.doctor_name)
 
     # Process the query
     if is_marketing_appropriate(query):
@@ -134,11 +156,13 @@ def process_query_existing(query, vectorstore, user_lifestyle, prioritized_lense
         if langchain_answer:
             refined_response = refine_langchain_response(langchain_answer, query, prioritized_lenses, specific_lens_query)
             debug_print("Returning merged response")
-            return merge_responses(refined_response, query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison, lenses_to_compare if is_comparison else None, specific_lens_query)
+            merged_response = merge_responses(refined_response, query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison, lenses_to_compare if is_comparison else None, specific_lens_query)
+            return format_and_replace(merged_response, st.session_state.doctor_name)
     
     # If not marketing appropriate or LangChain doesn't provide an answer, use ChatGPT
     debug_print("Using ChatGPT for response")
-    return chat_with_gpt(st.session_state.messages)
+    chatgpt_response = chat_with_gpt(st.session_state.messages)
+    return format_and_replace(chatgpt_response, st.session_state.doctor_name)
 
 def is_marketing_appropriate(query):
     debug_print(f"Entering is_marketing_appropriate() with query: {query}")
@@ -307,7 +331,6 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
     
     # For all other queries, use the existing logic
     return process_query_existing(query, vectorstore, user_lifestyle, prioritized_lenses)
-
 
 def get_lens_description(lens_name, user_lifestyle):
     debug_print(f"Entering get_lens_description() for lens: {lens_name}")
@@ -693,6 +716,9 @@ def main():
             st.session_state.prioritized_lenses = prioritized_lenses
             initial_greeting = f"Hello! I'm {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"
             name_request = "Before we begin, I'd love to know your name. What should I call you?"
+            
+            initial_greeting = format_and_replace(initial_greeting, doctor_name)
+            name_request = format_and_replace(name_request, doctor_name)
             
             st.session_state.messages = [
                 {"role": "system", "content": "You are an AI assistant for IOL selection."},
