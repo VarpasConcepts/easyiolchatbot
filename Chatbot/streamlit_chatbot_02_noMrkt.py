@@ -459,7 +459,7 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
                               borderWidth=1,
                               borderPadding=(10,10,10,10),
                               borderRadius=10,
-                              spaceAfter=20))
+                              spaceAfter=75))
     styles.add(ParagraphStyle(name='BotBubble', 
                               alignment=TA_LEFT, 
                               textColor=colors.black,
@@ -470,7 +470,7 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
                               borderWidth=1,
                               borderPadding=(10,10,10,10),
                               borderRadius=10,
-                              spaceAfter=20))
+                              spaceAfter=75))
 
     # Add title
     Story.append(Paragraph("IOL Consultation Summary", styles['Heading1']))
