@@ -66,6 +66,9 @@ def format_and_replace(text, doctor_name):
     text = '\n'.join(lines)
     
     return text
+def process_response(response, doctor_name):
+    formatted_response = format_and_replace(response, doctor_name)
+    return formatted_response
 
 def query_knowledge_base(query, vectorstore):
     debug_print(f"Entering query_knowledge_base() with query: {query}")
@@ -144,7 +147,7 @@ def process_query_existing(query, vectorstore, user_lifestyle, prioritized_lense
         
         if len(lenses_to_compare) < 2:
             debug_print("Insufficient lenses for comparison")
-            return format_and_replace("I'm sorry, but I couldn't identify which specific lens types you want to compare. Could you please clarify which lens types you'd like me to compare?", st.session_state.doctor_name)
+            return process_response("I'm sorry, but I couldn't identify which specific lens types you want to compare. Could you please clarify which lens types you'd like me to compare?", st.session_state.doctor_name)
 
     # Process the query
     if is_marketing_appropriate(query):
@@ -157,12 +160,12 @@ def process_query_existing(query, vectorstore, user_lifestyle, prioritized_lense
             refined_response = refine_langchain_response(langchain_answer, query, prioritized_lenses, specific_lens_query)
             debug_print("Returning merged response")
             merged_response = merge_responses(refined_response, query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison, lenses_to_compare if is_comparison else None, specific_lens_query)
-            return format_and_replace(merged_response, st.session_state.doctor_name)
+            return process_response(merged_response, st.session_state.doctor_name)
     
     # If not marketing appropriate or LangChain doesn't provide an answer, use ChatGPT
     debug_print("Using ChatGPT for response")
     chatgpt_response = chat_with_gpt(st.session_state.messages)
-    return format_and_replace(chatgpt_response, st.session_state.doctor_name)
+    return process_response(chatgpt_response, st.session_state.doctor_name)
 
 def is_marketing_appropriate(query):
     debug_print(f"Entering is_marketing_appropriate() with query: {query}")
@@ -518,7 +521,6 @@ def end_conversation():
         st.success("Thank you for your time. Your consultation summary is ready for download.")
         debug_print("Conversation ended, summary generated, and state reset")
 
-
 def main():
     st.set_page_config(
         page_title="EasyIOLChat",
@@ -717,8 +719,8 @@ def main():
             initial_greeting = f"Hello! I'm {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"
             name_request = "Before we begin, I'd love to know your name. What should I call you?"
             
-            initial_greeting = format_and_replace(initial_greeting, doctor_name)
-            name_request = format_and_replace(name_request, doctor_name)
+            initial_greeting = process_response(initial_greeting, doctor_name)
+            name_request = process_response(name_request, doctor_name)
             
             st.session_state.messages = [
                 {"role": "system", "content": "You are an AI assistant for IOL selection."},
@@ -776,16 +778,17 @@ def main():
 
             if submit_button and first_name and last_name:
                 st.session_state.user_name = f"{first_name} {last_name}"
-                
                 # Add the user's name to the chat history
                 st.session_state.messages.append({"role": "user", "content": st.session_state.user_name})
                 st.session_state.chat_history.append(("user", st.session_state.user_name))
                 
                 bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
+                bot_response = process_response(bot_response, st.session_state.doctor_name)
                 st.session_state.messages.append({"role": "assistant", "content": bot_response})
                 st.session_state.chat_history.append(("bot", bot_response))
                 
                 lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
+                lifestyle_question = process_response(lifestyle_question, st.session_state.doctor_name)
                 st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
                 st.session_state.chat_history.append(("bot", lifestyle_question))
                 debug_print(f"User name set and added to chat history: {st.session_state.user_name}")
