@@ -51,7 +51,11 @@ def format_and_replace(text, doctor_name):
     # Replace doctor-related words with the actual doctor's name
     doctor_words = ['doctor', 'surgeon', 'ophthalmologist']
     for word in doctor_words:
-        text = re.sub(r'\b' + word + r'\b', doctor_name, text, flags=re.IGNORECASE)
+        # Remove "your" (case-insensitive) before the doctor's name
+        text = re.sub(r'\b(?i:your\s+)?' + word + r'\b', doctor_name, text, flags=re.IGNORECASE)
+    
+    # Remove any remaining "your" before the doctor's name
+    text = re.sub(r'\b(?i:your)\s+' + re.escape(doctor_name), doctor_name, text)
     
     # Add line breaks for better readability
     text = text.replace(". ", ".\n")
