@@ -439,6 +439,19 @@ def generate_summary(chat_history):
     debug_print("Summary generated")
     return summary
 
+def format_text_for_pdf(text):
+    lines = text.split('\n')
+    formatted_lines = []
+    for line in lines:
+        if line.strip().startswith('•'):
+            formatted_lines.append(f"<bullet>&bull;</bullet>{line.strip()[1:]}")
+        elif ':' in line and not line.strip().endswith(':'):
+            parts = line.split(':', 1)
+            formatted_lines.append(f"<b>{parts[0].strip()}:</b>{parts[1]}")
+        else:
+            formatted_lines.append(line)
+    return '<br/>'.join(formatted_lines)
+
 def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, prioritized_lenses):
     debug_print("Entering create_pdf()")
     buffer = BytesIO()
@@ -449,28 +462,32 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
     Story = []
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY))
-    styles.add(ParagraphStyle(name='UserBubble', 
-                              alignment=TA_RIGHT, 
-                              textColor=colors.white,
+    styles.add(ParagraphStyle(name='ChatBubble', 
                               fontSize=10,
                               leading=14,
+                              spaceBefore=6,
+                              spaceAfter=12,
+                              bulletIndent=20,
+                              allowWidows=0,
+                              allowOrphans=0))
+    styles.add(ParagraphStyle(name='UserBubble', 
+                              parent=styles['ChatBubble'],
+                              alignment=TA_RIGHT, 
+                              textColor=colors.white,
                               backColor=colors.lightblue,
                               borderColor=colors.lightblue,
                               borderWidth=1,
                               borderPadding=(10,10,10,10),
-                              borderRadius=10,
-                              spaceAfter=40))
+                              borderRadius=10))
     styles.add(ParagraphStyle(name='BotBubble', 
+                              parent=styles['ChatBubble'],
                               alignment=TA_LEFT, 
                               textColor=colors.black,
-                              fontSize=10,
-                              leading=14,
                               backColor=colors.lightgrey,
                               borderColor=colors.lightgrey,
                               borderWidth=1,
                               borderPadding=(10,10,10,10),
-                              borderRadius=10,
-                              spaceAfter=40))
+                              borderRadius=10))
 
     # Add title
     Story.append(Paragraph("IOL Consultation Summary", styles['Heading1']))
@@ -483,13 +500,13 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
     Story.append(Paragraph(f"Referring Doctor: Dr. {doctor_name}", styles['Normal']))
     Story.append(Spacer(1, 6))
     Story.append(Paragraph("Lifestyle and Visual Needs:", styles['Normal']))
-    Story.append(Paragraph(user_lifestyle, styles['Justify']))
+    Story.append(Paragraph(format_text_for_pdf(user_lifestyle), styles['Justify']))
     Story.append(Spacer(1, 6))
     Story.append(Paragraph("Prioritized Lens Options:", styles['Normal']))
     Story.append(Paragraph(", ".join(prioritized_lenses), styles['Justify']))
     Story.append(Spacer(1, 12))
     Story.append(Paragraph("Consultation Summary:", styles['Normal']))
-    Story.append(Paragraph(summary, styles['Justify']))
+    Story.append(Paragraph(format_text_for_pdf(summary), styles['Justify']))
     Story.append(Spacer(1, 12))
 
     # Add page break before chat history
@@ -499,10 +516,11 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
     Story.append(Paragraph("Detailed Conversation", styles['Heading2']))
     Story.append(Spacer(1, 12))
     for role, message in chat_history:
+        formatted_message = format_text_for_pdf(message)
         if role == "user":
-            p = Paragraph(message, styles['UserBubble'])
+            p = Paragraph(formatted_message, styles['UserBubble'])
         elif role == "bot":
-            p = Paragraph(message, styles['BotBubble'])
+            p = Paragraph(formatted_message, styles['BotBubble'])
         Story.append(p)
 
     doc.build(Story)
