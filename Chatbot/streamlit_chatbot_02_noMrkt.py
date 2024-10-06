@@ -7,10 +7,12 @@ from langchain.chains import RetrievalQA
 from langchain_openai import OpenAI as LangChainOpenAI
 import time
 import base64
+from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_JUSTIFY
+from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from io import BytesIO
 import re
 
@@ -425,18 +427,19 @@ def generate_summary(chat_history):
     2. Any specific lens types the patient showed interest in
     3. Key lifestyle factors that might influence lens choice
     4. Any misconceptions or areas where the patient needed clarification
+    5. The patient's overall understanding and comfort level with the IOL options discussed
 
     Chat History:
     {chat_history}
 
-    Please provide a summary that would be helpful for the surgeon to quickly understand the patient's needs and concerns:
+    Please provide a summary that would be helpful for the surgeon to quickly understand the patient's needs, concerns, and the outcome of the consultation:
     """
     messages = [{"role": "user", "content": summary_prompt}]
     summary = chat_with_gpt(messages)
     debug_print("Summary generated")
     return summary
 
-def create_pdf(chat_history, summary):
+def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, prioritized_lenses):
     debug_print("Entering create_pdf()")
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter,
@@ -446,24 +449,57 @@ def create_pdf(chat_history, summary):
     Story = []
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY))
+    styles.add(ParagraphStyle(name='UserBubble', 
+                              alignment=TA_RIGHT, 
+                              textColor=colors.white,
+                              fontSize=10,
+                              leading=14,
+                              backColor=colors.lightblue,
+                              borderColor=colors.lightblue,
+                              borderWidth=1,
+                              borderPadding=(5,5,5,5),
+                              borderRadius=10))
+    styles.add(ParagraphStyle(name='BotBubble', 
+                              alignment=TA_LEFT, 
+                              textColor=colors.black,
+                              fontSize=10,
+                              leading=14,
+                              backColor=colors.lightgrey,
+                              borderColor=colors.lightgrey,
+                              borderWidth=1,
+                              borderPadding=(5,5,5,5),
+                              borderRadius=10))
 
     # Add title
     Story.append(Paragraph("IOL Consultation Summary", styles['Heading1']))
     Story.append(Spacer(1, 12))
 
-    # Add chat history
-    Story.append(Paragraph("Chat History:", styles['Heading2']))
-    for role, message in chat_history:
-        p = Paragraph(f"<b>{role.capitalize()}:</b> {message}", styles['Justify'])
-        Story.append(p)
-        Story.append(Spacer(1, 6))
-
+    # Add patient summary
+    Story.append(Paragraph("Patient Summary", styles['Heading2']))
+    Story.append(Spacer(1, 6))
+    Story.append(Paragraph(f"Patient Name: {user_name}", styles['Normal']))
+    Story.append(Paragraph(f"Referring Doctor: Dr. {doctor_name}", styles['Normal']))
+    Story.append(Spacer(1, 6))
+    Story.append(Paragraph("Lifestyle and Visual Needs:", styles['Normal']))
+    Story.append(Paragraph(user_lifestyle, styles['Justify']))
+    Story.append(Spacer(1, 6))
+    Story.append(Paragraph("Prioritized Lens Options:", styles['Normal']))
+    Story.append(Paragraph(", ".join(prioritized_lenses), styles['Justify']))
+    Story.append(Spacer(1, 12))
+    Story.append(Paragraph("Consultation Summary:", styles['Normal']))
+    Story.append(Paragraph(summary, styles['Justify']))
     Story.append(Spacer(1, 12))
 
-    # Add summary
-    Story.append(Paragraph("Patient Summary:", styles['Heading2']))
+    # Add chat history
+    Story.append(Paragraph("Detailed Conversation", styles['Heading2']))
     Story.append(Spacer(1, 6))
-    Story.append(Paragraph(summary, styles['Justify']))
+    for role, message in chat_history:
+        if role == "user":
+            p = Paragraph(message, styles['UserBubble'])
+        elif role == "bot":
+            p = Paragraph(message, styles['BotBubble'])
+        Story.append(p)
+        Story.append(Spacer(1, 6))
 
     doc.build(Story)
     pdf_content = buffer.getvalue()
@@ -488,6 +524,10 @@ def process_user_input(user_input, vectorstore):
         st.session_state.messages.append({"role": "user", "content": corrected_input})
         st.session_state.chat_history.append(("user", corrected_input))
         st.session_state.question_count += 1
+        
+        # Capture lifestyle information if it's the first response after asking for it
+        if st.session_state.question_count == 1:
+            st.session_state.user_lifestyle = corrected_input
         
         debug_print(f"Question count: {st.session_state.question_count}")
 
@@ -517,10 +557,18 @@ def end_conversation():
         chat_history_text = "\n".join([f"{role}: {message}" for role, message in st.session_state.chat_history])
         summary = generate_summary(chat_history_text)
         
-        pdf_content = create_pdf(st.session_state.chat_history, summary)
+        pdf_content = create_pdf(
+            st.session_state.chat_history, 
+            summary, 
+            st.session_state.user_name, 
+            st.session_state.doctor_name, 
+            st.session_state.user_lifestyle, 
+            st.session_state.prioritized_lenses
+        )
         
         st.markdown(get_binary_file_downloader_html(pdf_content, 'IOL_Consultation_Summary'), unsafe_allow_html=True)
         
+        # Reset session state variables
         st.session_state.messages = []
         st.session_state.chat_history = []
         st.session_state.user_lifestyle = ""
@@ -704,9 +752,7 @@ def main():
                 min-width: 2rem;
                 min-height: 2rem;
             }
-
         </style>
-
     """, unsafe_allow_html=True)
 
     # Create a sidebar
@@ -855,7 +901,6 @@ def main():
                     process_user_input(user_input, vectorstore)
                 elif end_conversation_button:
                     end_conversation()
-
 
 if __name__ == "__main__":
     main()
