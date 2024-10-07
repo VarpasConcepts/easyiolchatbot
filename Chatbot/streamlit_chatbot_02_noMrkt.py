@@ -704,7 +704,6 @@ def main():
                 margin-bottom: 20px;
             }
 
-            /* Button styling */
             .stButton > button {
                 border: none !important;
                 padding: 10px 24px !important;
@@ -715,27 +714,19 @@ def main():
                 margin: 4px 2px !important;
                 cursor: pointer !important;
                 border-radius: 5px !important;
-                color: white !important;
-            }
-
-            /* "Yes, tell me more about IOLs" button (Green) */
-            div.row-widget.stButton:first-of-type button {
-                background-color: #4CAF50 !important; /* Green */
-            }
-
-            /* "No, show me the lens options" button (Red) */
-            div.row-widget.stButton:nth-of-type(2) button {
-                background-color: #FF4B4B !important; /* Red */
+                transition: opacity 0.3s !important;
             }
 
             /* Send button styling */
-            div[data-testid="stForm"] .stButton > button:first-child {
-                background-color: #007bff !important; /* Blue */
+            div[data-testid="stForm"] div.row-widget.stButton:first-child > button {
+                background-color: #007bff !important;
+                color: white !important;
             }
 
             /* End Conversation button styling */
-            div[data-testid="stForm"] .stButton > button:last-child {
-                background-color: #FF4B4B !important; /* Red */
+            div[data-testid="stForm"] div.row-widget.stButton:last-child > button {
+                background-color: #FF4B4B !important;
+                color: white !important;
             }
 
             /* Hover effects */
