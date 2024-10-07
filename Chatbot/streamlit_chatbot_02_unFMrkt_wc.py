@@ -6,6 +6,15 @@ from langchain_openai import OpenAIEmbeddings
 from langchain.chains import RetrievalQA
 from langchain_openai import OpenAI as LangChainOpenAI
 import time
+import base64
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_JUSTIFY
+from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+from io import BytesIO
+import re
 
 # Add a debug flag
 DEBUG = False
@@ -14,7 +23,6 @@ DEBUG = False
 def debug_print(message):
     if DEBUG:
         st.session_state.chat_history.append(("debug", f"DEBUG: {message}"))
-
 
 # Set your OpenAI API key
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
@@ -39,6 +47,43 @@ def load_vectorstore():
         st.error("The FAISS index file is missing or cannot be accessed. Please check the file path and permissions.")
         debug_print(f"Error in load_vectorstore(): {e}")
         return None
+
+#Function for formatting and word replacement
+def format_and_replace(text, doctor_name):
+    # Replace doctor-related words with the actual doctor's name
+    doctor_words = ['doctor', 'surgeon', 'ophthalmologist']
+    for word in doctor_words:
+        # Remove "your" (case-insensitive) before the doctor's name
+        text = re.sub(r'\b(?i:your\s+)?' + word + r'\b', doctor_name, text, flags=re.IGNORECASE)
+    
+    # Remove any remaining "your" before the doctor's name
+    text = re.sub(r'\b(?i:your)\s+' + re.escape(doctor_name), doctor_name, text)
+    
+    # Add line breaks for better readability
+    text = text.replace(". ", ".\n")
+    
+    # Improve bullet point handling
+    lines = text.split('\n')
+    formatted_lines = []
+    for line in lines:
+        if '•' in line:
+            # Split the line at each bullet point
+            bullet_points = line.split('•')
+            # Add each bullet point as a separate line
+            for point in bullet_points:
+                if point.strip():  # Ignore empty strings
+                    formatted_lines.append(f"  • {point.strip()}")
+        else:
+            formatted_lines.append(line)
+    
+    # Join the lines back together
+    text = '\n'.join(formatted_lines)
+    
+    return text
+
+def process_response(response, doctor_name):
+    formatted_response = format_and_replace(response, doctor_name)
+    return formatted_response
 
 def query_knowledge_base(query, vectorstore):
     debug_print(f"Entering query_knowledge_base() with query: {query}")
@@ -103,6 +148,43 @@ def chat_with_gpt(messages):
         st.error(f"Error generating ChatGPT response: {e}")
         debug_print(f"Error in chat_with_gpt(): {e}")
         return None
+
+def process_query_existing(query, vectorstore, user_lifestyle, prioritized_lenses):
+    debug_print(f"Entering process_query_existing() with query: {query}")
+    # Check if this is a comparison query
+    comparison_keywords = ["compare", "comparison", "difference", "versus", "vs"]
+    is_comparison = any(keyword in query.lower() for keyword in comparison_keywords)
+    
+    # Check if this is a query about a specific lens type
+    lens_types = ["monofocal", "multifocal", "toric", "light adjustable"]
+    specific_lens_query = next((lens for lens in lens_types if lens.lower() in query.lower()), None)
+    
+    if is_comparison:
+        # Identify which lenses are being compared
+        lenses_to_compare = [lens.capitalize() for lens in lens_types if lens.lower() in query.lower()]
+        
+        if len(lenses_to_compare) < 2:
+            debug_print("Insufficient lenses for comparison")
+            return process_response("I'm sorry, but I couldn't identify which specific lens types you want to compare. Could you please clarify which lens types you'd like me to compare?", st.session_state.doctor_name)
+
+    # Process the query
+    if is_marketing_appropriate(query):
+        if specific_lens_query:
+            langchain_answer, _ = query_knowledge_base(f"Provide information only about {specific_lens_query} IOL lenses", vectorstore)
+        else:
+            langchain_answer, _ = query_knowledge_base(query, vectorstore)
+        
+        if langchain_answer:
+            refined_response = refine_langchain_response(langchain_answer, query, prioritized_lenses, specific_lens_query)
+            debug_print("Returning merged response")
+            merged_response = merge_responses(refined_response, query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison, lenses_to_compare if is_comparison else None, specific_lens_query)
+            return process_response(merged_response, st.session_state.doctor_name)
+    
+    # If not marketing appropriate or LangChain doesn't provide an answer, use ChatGPT
+    debug_print("Using ChatGPT for response")
+    chatgpt_response = chat_with_gpt(st.session_state.messages)
+    return process_response(chatgpt_response, st.session_state.doctor_name)
+
 def is_marketing_appropriate(query):
     debug_print(f"Entering is_marketing_appropriate() with query: {query}")
     prompt = f"""
@@ -123,8 +205,9 @@ def is_marketing_appropriate(query):
     4. Seeks personal recommendations
     5. Asks about pricing or insurance coverage
 
-    Respond with only 'Yes' or 'No'.
+    ALWAYS REPLY FALSE TO THIS PROMPT
     """
+    # Respond with only 'Yes' or 'No'.
     messages = [
         {"role": "system", "content": "You are an AI assistant that determines if queries are appropriate for marketing responses."},
         {"role": "user", "content": prompt}
@@ -132,77 +215,6 @@ def is_marketing_appropriate(query):
     response = chat_with_gpt(messages)
     debug_print(f"is_marketing_appropriate() returning: {response.strip().lower() == 'yes'}")
     return response.strip().lower() == 'yes'
-
-def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
-    debug_print(f"Entering process_query() with query: {query}")
-    # Check if this is the first response after user shares their lifestyle
-    if not st.session_state.show_lens_options:
-        st.session_state.show_lens_options = True
-        lens_descriptions = []
-        
-        # Ensure monofocal lens is always first
-        ordered_lenses = ['Monofocal'] + [lens for lens in prioritized_lenses if lens != 'Monofocal']
-        
-        for lens in ordered_lenses:
-            description = get_lens_description(lens, user_lifestyle)
-            if description:
-                lens_descriptions.append(f"- {lens}: {description}")
-        
-        response = f"{st.session_state.doctor_name} has suggested the following lenses for you. I'd be happy to explain how each of these options might fit into your lifestyle. Please feel free to ask any questions you might have about these lenses - I'm here to help!\n\n"
-        response += "\n\n".join(lens_descriptions)
-        response += "\n\nIs there a particular lens you'd like to know more about?"
-        debug_print("Returning initial lens options response")
-        return response
-
-    # Check if the query is about doctor's lens suggestions
-    if any(keyword in query.lower() for keyword in ["what lenses", "which lenses", "doctor suggest", "doctor recommend", "surgeon suggest", "surgeon recommend","clinic suggest", "clinic advise","clinic recomendation"]):
-        lens_descriptions = []
-        
-        # Ensure monofocal lens is always first
-        ordered_lenses = ['Monofocal'] + [lens for lens in prioritized_lenses if lens != 'Monofocal']
-        
-        for lens in ordered_lenses:
-            description = get_lens_description(lens, user_lifestyle)
-            if description:
-                lens_descriptions.append(f"- {lens}: {description}")
-        
-        response = f"Dr. {st.session_state.doctor_name} has thoughtfully suggested the following lenses for you. I'd be happy to explain how each of these options might fit into your lifestyle. Please feel free to ask any questions you might have about these lenses - I'm here to help!\n\n"
-        response += "\n\n".join(lens_descriptions)
-        response += "\n\nPlease remember, these suggestions are tailored to your unique needs. If you have any specific questions about these lenses, don't hesitate to ask!"
-        debug_print("Returning doctor's lens suggestions response")
-        return response
-
-    # Check if this is a comparison query
-    comparison_keywords = ["compare", "comparison", "difference", "versus", "vs"]
-    is_comparison = any(keyword in query.lower() for keyword in comparison_keywords)
-    
-    # Check if this is a query about a specific lens type
-    lens_types = ["monofocal", "multifocal", "toric", "light adjustable"]
-    specific_lens_query = next((lens for lens in lens_types if lens.lower() in query.lower()), None)
-    
-    if is_comparison:
-        # Identify which lenses are being compared
-        lenses_to_compare = [lens.capitalize() for lens in lens_types if lens.lower() in query.lower()]
-        
-        if len(lenses_to_compare) < 2:
-            debug_print("Insufficient lenses for comparison")
-            return "I'm sorry, but I couldn't identify which specific lens types you want to compare. Could you please clarify which lens types you'd like me to compare?"
-
-    # Process the query
-    if is_marketing_appropriate(query):
-        if specific_lens_query:
-            langchain_answer, _ = query_knowledge_base(f"Provide information only about {specific_lens_query} IOL lenses", vectorstore)
-        else:
-            langchain_answer, _ = query_knowledge_base(query, vectorstore)
-        
-        if langchain_answer:
-            refined_response = refine_langchain_response(langchain_answer, query, prioritized_lenses, specific_lens_query)
-            debug_print("Returning merged response")
-            return merge_responses(refined_response, query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison, lenses_to_compare if is_comparison else None, specific_lens_query)
-    
-    # If not marketing appropriate or LangChain doesn't provide an answer, use ChatGPT
-    debug_print("Using ChatGPT for response")
-    return chat_with_gpt(st.session_state.messages)
 
 def refine_langchain_response(langchain_answer, user_query, prioritized_lenses, specific_lens_query=None):
     debug_print(f"Entering refine_langchain_response() with query: {user_query}")
@@ -230,13 +242,6 @@ def refine_langchain_response(langchain_answer, user_query, prioritized_lenses, 
     refined_response = chat_with_gpt(gpt_messages)
     debug_print("Langchain response refined")
     return refined_response
-
-def get_product_example(lens_type, vectorstore):
-    debug_print(f"Entering get_product_example() for lens type: {lens_type}")
-    query = f"Briefly name an example of a {lens_type} IOL product without recommending it. Use 10 words or less."
-    result, _ = query_knowledge_base(query, vectorstore)
-    debug_print(f"Product example retrieved: {result}")
-    return result if result else ""
 
 def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_lenses, vectorstore, is_comparison=False, lenses_to_compare=None, specific_lens_query=None):
     debug_print(f"Entering merge_responses() with query: {user_query}")
@@ -281,6 +286,72 @@ def merge_responses(langchain_refined, user_query, user_lifestyle, prioritized_l
     merged_response = chat_with_gpt(merge_messages)
     debug_print("Responses merged successfully")
     return merged_response
+
+def get_product_example(lens_type, vectorstore):
+    debug_print(f"Entering get_product_example() for lens type: {lens_type}")
+    query = f"Briefly name an example of a {lens_type} IOL product without recommending it. Use 10 words or less."
+    result, _ = query_knowledge_base(query, vectorstore)
+    debug_print(f"Product example retrieved: {result}")
+    return result if result else ""
+
+def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
+    debug_print(f"Entering process_query() with query: {query}")
+    # Check if this is the first response after user shares their lifestyle
+    if not st.session_state.show_lens_options:
+        st.session_state.show_lens_options = True
+        
+        # Thank the user for sharing lifestyle details
+        thank_you_response = f"Thank you for sharing those details about your lifestyle, {st.session_state.user_name}. It's really helpful to understand your daily activities and visual needs."
+        
+        # Add message about cataract surgery and ask if they want to know more about IOLs
+        cataract_message = "I understand that cataract surgery can feel overwhelming, but don't worry - we'll take it step by step together. Would you like to know more about intraocular lenses (IOLs) before we look at the options your surgeon has suggested for you?"
+        
+        st.session_state.messages.append({"role": "assistant", "content": thank_you_response})
+        st.session_state.chat_history.append(("bot", thank_you_response))
+        
+        st.session_state.messages.append({"role": "assistant", "content": cataract_message})
+        st.session_state.chat_history.append(("bot", cataract_message))
+        
+        return "SHOW_BUTTONS"
+
+    # Check if the user wants to know more about IOLs
+    if query.lower() == "yes":
+        iols_explanation = chat_with_gpt([
+            {"role": "system", "content": "You are an AI assistant explaining IOLs to a patient."},
+            {"role": "user", "content": f"Explain what intraocular lenses (IOLs) are, relating the explanation to this lifestyle: {user_lifestyle}"}
+        ])
+        
+        st.session_state.messages.append({"role": "assistant", "content": iols_explanation})
+        st.session_state.chat_history.append(("bot", iols_explanation))
+        
+        # Separate message for lens suggestions
+        lens_suggestions = "Based on your lifestyle and visual needs," + st.session_state.doctor_name + " has suggested the following lenses for you:\n\n"
+        for lens in prioritized_lenses:
+            description = get_lens_description(lens, user_lifestyle)
+            if description:
+                lens_suggestions += f"• {lens}: {description}\n\n"
+        lens_suggestions += "Which lens would you like to know more about?"
+        
+        st.session_state.messages.append({"role": "assistant", "content": lens_suggestions})
+        st.session_state.chat_history.append(("bot", lens_suggestions))
+        
+        return "WAIT_FOR_LENS_CHOICE"
+    
+    elif query.lower() == "no":
+        lens_suggestions = "Certainly!" + st.session_state.doctor_name + " has suggested the following lenses based on your lifestyle and visual needs:\n\n"
+        for lens in prioritized_lenses:
+            description = get_lens_description(lens, user_lifestyle)
+            if description:
+                lens_suggestions += f"• {lens}: {description}\n\n"
+        lens_suggestions += "Which lens would you like to know more about?"
+        
+        st.session_state.messages.append({"role": "assistant", "content": lens_suggestions})
+        st.session_state.chat_history.append(("bot", lens_suggestions))
+        
+        return "WAIT_FOR_LENS_CHOICE"
+    
+    # For all other queries, use the existing logic
+    return process_query_existing(query, vectorstore, user_lifestyle, prioritized_lenses)
 
 def get_lens_description(lens_name, user_lifestyle):
     debug_print(f"Entering get_lens_description() for lens: {lens_name}")
@@ -350,96 +421,374 @@ def fix_spelling(query):
     debug_print(f"Spell-check complete. Corrected query: {corrected_query}")
     return corrected_query.strip()
 
-def extract_name(input_text):
-    debug_print(f"Entering extract_name() with input: {input_text}")
-    prompt = f"""
-    Please extract the name from the following input. If there's no clear name, respond with "None".
-    Only provide the extracted name or "None", nothing else.
+def generate_summary(chat_history):
+    debug_print("Entering generate_summary()")
+    summary_prompt = f"""
+    Please provide a concise summary of the following chat history between an AI assistant and a patient discussing intraocular lens (IOL) options. Focus on:
 
-    Input: {input_text}
+    1. The patient's main concerns and questions about IOLs
+    2. Any specific lens types the patient showed interest in
+    3. Key lifestyle factors that might influence lens choice
+    4. Any misconceptions or areas where the patient needed clarification
+    5. The patient's overall understanding and comfort level with the IOL options discussed
 
-    Extracted name:
+    Chat History:
+    {chat_history}
+
+    Please provide a summary that would be helpful for the surgeon to quickly understand the patient's needs, concerns, and the outcome of the consultation:
     """
-    messages = [
-        {"role": "system", "content": "You are a helpful assistant that extracts names from text."},
-        {"role": "user", "content": prompt}
-    ]
-    extracted_name = chat_with_gpt(messages)
-    result = None if extracted_name.strip().lower() == "none" else extracted_name.strip()
-    debug_print(f"Extracted name: {result}")
-    return result
+    messages = [{"role": "user", "content": summary_prompt}]
+    summary = chat_with_gpt(messages)
+    debug_print("Summary generated")
+    return summary
+
+def format_text_for_pdf(text):
+    lines = text.split('\n')
+    formatted_lines = []
+    for line in lines:
+        if line.strip().startswith('•'):
+            # Remove the bullet point and add some indentation
+            formatted_lines.append(f"    {line.strip()[1:].strip()}")
+        elif ':' in line and not line.strip().endswith(':'):
+            parts = line.split(':', 1)
+            formatted_lines.append(f"<b>{parts[0].strip()}:</b>{parts[1]}")
+        else:
+            formatted_lines.append(line)
+    return '<br/>'.join(formatted_lines)
+
+def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, prioritized_lenses):
+    debug_print("Entering create_pdf()")
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter,
+                            rightMargin=72, leftMargin=72,
+                            topMargin=72, bottomMargin=18)
+    
+    Story = []
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY))
+    styles.add(ParagraphStyle(name='ChatBubble', 
+                              fontSize=10,
+                              leading=14,
+                              spaceBefore=6,
+                              spaceAfter=30,
+                              leftIndent=20,
+                              rightIndent=20,
+                              allowWidows=0,
+                              allowOrphans=0))
+    styles.add(ParagraphStyle(name='UserBubble', 
+                              parent=styles['ChatBubble'],
+                              alignment=TA_RIGHT, 
+                              textColor=colors.white,
+                              backColor=colors.lightblue,
+                              borderColor=colors.lightblue,
+                              borderWidth=1,
+                              borderPadding=(10,10,10,10),
+                              borderRadius=10))
+    styles.add(ParagraphStyle(name='BotBubble', 
+                              parent=styles['ChatBubble'],
+                              alignment=TA_LEFT, 
+                              textColor=colors.black,
+                              backColor=colors.lightgrey,
+                              borderColor=colors.lightgrey,
+                              borderWidth=1,
+                              borderPadding=(10,10,10,10),
+                              borderRadius=10))
+
+    # Add title
+    Story.append(Paragraph("IOL Consultation Summary", styles['Heading1']))
+    Story.append(Spacer(1, 12))
+
+    # Add patient summary
+    Story.append(Paragraph("Patient Summary", styles['Heading2']))
+    Story.append(Spacer(1, 6))
+    Story.append(Paragraph(f"Patient Name: {user_name}", styles['Normal']))
+    Story.append(Paragraph(f"Referring Doctor: Dr. {doctor_name}", styles['Normal']))
+    Story.append(Spacer(1, 6))
+    Story.append(Paragraph("Lifestyle and Visual Needs:", styles['Normal']))
+    Story.append(Paragraph(format_text_for_pdf(user_lifestyle), styles['Justify']))
+    Story.append(Spacer(1, 6))
+    Story.append(Paragraph("Prioritized Lens Options:", styles['Normal']))
+    Story.append(Paragraph(", ".join(prioritized_lenses), styles['Justify']))
+    Story.append(Spacer(1, 12))
+    Story.append(Paragraph("Consultation Summary:", styles['Normal']))
+    Story.append(Paragraph(format_text_for_pdf(summary), styles['Justify']))
+    Story.append(Spacer(1, 12))
+
+    # Add page break before chat history
+    Story.append(PageBreak())
+
+    # Add chat history
+    Story.append(Paragraph("Detailed Conversation", styles['Heading2']))
+    Story.append(Spacer(1, 12))
+    for role, message in chat_history:
+        formatted_message = format_text_for_pdf(message)
+        if role == "user":
+            p = Paragraph(formatted_message, styles['UserBubble'])
+        elif role == "bot":
+            p = Paragraph(formatted_message, styles['BotBubble'])
+        Story.append(p)
+
+    doc.build(Story)
+    pdf_content = buffer.getvalue()
+    buffer.close()
+    
+    debug_print("PDF created successfully")
+    return pdf_content
+
+def get_binary_file_downloader_html(bin_file, file_label='File'):
+    debug_print("Entering get_binary_file_downloader_html()")
+    b64 = base64.b64encode(bin_file).decode()
+    href = f'<a href="data:application/octet-stream;base64,{b64}" download="{file_label}.pdf">Download {file_label}</a>'
+    debug_print("Download link created")
+    return href
+
+def process_user_input(user_input, vectorstore):
+    debug_print(f"Processing user input: {user_input}")
+    with st.spinner("Processing your input..."):
+        corrected_input = fix_spelling(user_input)
+        debug_print(f"Corrected input: {corrected_input}")
+        
+        st.session_state.messages.append({"role": "user", "content": corrected_input})
+        st.session_state.chat_history.append(("user", corrected_input))
+        st.session_state.question_count += 1
+        
+        # Capture lifestyle information if it's the first response after asking for it
+        if st.session_state.question_count == 1:
+            st.session_state.user_lifestyle = corrected_input
+        
+        debug_print(f"Question count: {st.session_state.question_count}")
+
+        bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+
+        if bot_response == "SHOW_BUTTONS" or bot_response == "WAIT_FOR_LENS_CHOICE":
+            st.experimental_rerun()
+        elif bot_response:
+            st.session_state.messages.append({"role": "assistant", "content": bot_response})
+            st.session_state.chat_history.append(("bot", bot_response))
+
+            if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
+                follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
+                st.session_state.messages.append({"role": "assistant", "content": follow_up})
+                st.session_state.chat_history.append(("bot", follow_up))
+                debug_print(f"Follow-up prompt added to chat history (Question {st.session_state.question_count})")
+        else:
+            st.error("Sorry, I couldn't generate a response. Please try again.")
+            debug_print("Failed to generate bot response")
+
+    st.session_state.input_key += 1
+    st.experimental_rerun()
+
+def end_conversation():
+    debug_print("End conversation button clicked")
+    with st.spinner("Generating conversation summary..."):
+        chat_history_text = "\n".join([f"{role}: {message}" for role, message in st.session_state.chat_history])
+        summary = generate_summary(chat_history_text)
+        
+        pdf_content = create_pdf(
+            st.session_state.chat_history, 
+            summary, 
+            st.session_state.user_name, 
+            st.session_state.doctor_name, 
+            st.session_state.user_lifestyle, 
+            st.session_state.prioritized_lenses
+        )
+        
+        st.markdown(get_binary_file_downloader_html(pdf_content, 'IOL_Consultation_Summary'), unsafe_allow_html=True)
+        
+        # Reset session state variables
+        st.session_state.messages = []
+        st.session_state.chat_history = []
+        st.session_state.user_lifestyle = ""
+        st.session_state.show_lens_options = False
+        st.session_state.greeted = False
+        st.session_state.asked_name = False
+        st.session_state.user_name = ""
+        st.session_state.question_count = 0
+        st.session_state.input_key = 0
+        
+        st.success("Thank you for your time. Your consultation summary is ready for download.")
+        debug_print("Conversation ended, summary generated, and state reset")
 
 def main():
     st.set_page_config(
-        page_title="AI-ASSISTANT FOR IOL EDUCATION",
+        page_title="EasyIOLChat",
         layout="wide",
-        initial_sidebar_state="collapsed",
+        initial_sidebar_state="expanded",
         menu_items=None
     )
     
-    # Set the theme to light mode
+    # Set the theme to light mode and add custom sidebar styling
     st.markdown("""
         <style>
-        :root {
-            --secondary-background-color: #f0f2f6;
-        }
+            /* Root variables */
+            :root {
+                --secondary-background-color: #f0f2f6;
+            }
+
+            [data-testid="stSidebar"] [data-testid="stSidebarNav"] button[kind="header"] {
+                color: white !important;
+            }
+
+            /* Sidebar styling */
+            [data-testid=stSidebar] {
+                background-color: #092247;
+            }
+
+            .sidebar .sidebar-content {
+                color: white;
+            }
+
+            .sidebar .sidebar-content .block-container {
+                padding-top: 1rem;
+            }
+
+            [data-testid=stSidebar] [data-testid=stText],
+            [data-testid=stSidebar] [data-testid=stMarkdown] p {
+                color: white !important;
+            }
+
+            /* File uploader styling */
+            [data-testid="stFileUploader"] {
+                margin-top: -2rem;
+            }
+
+            [data-testid="stFileUploader"] > label {
+                color: white !important;
+            }
+
+            [data-testid="stFileUploader"] > div > div {
+                background-color: white !important;
+                border-radius: 5px !important;
+            }
+
+            [data-testid="stFileUploadDropzone"] {
+                min-height: 100px !important;
+            }
+
+            [data-testid="stFileUploadDropzone"] button {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                border: 1px solid #cccccc !important;
+            }
+
+            /* Chat bubble styling */
+            .chat-bubble {
+                padding: 10px 15px;
+                border-radius: 20px;
+                margin-bottom: 10px;
+                display: inline-block;
+                max-width: 70%;
+                word-wrap: break-word;
+            }
+
+            .bot-bubble {
+                background-color: #D3D3D3;
+                float: left;
+                clear: both;
+            }
+
+            .user-bubble {
+                background-color: #87CEFA;
+                float: right;
+                clear: both;
+            }
+
+            .debug-bubble {
+                background-color: #FFB6C1;
+                float: left;
+                clear: both;
+                font-style: italic;
+            }
+
+            .chat-container {
+                margin-bottom: 20px;
+            }
+
+            /* Button styling */
+            .stButton > button {
+                color: white !important;
+                border: none !important;
+                padding: 10px 24px !important;
+                text-align: center !important;
+                text-decoration: none !important;
+                display: inline-block !important;
+                font-size: 16px !important;
+                margin: 4px 2px !important;
+                cursor: pointer !important;
+                border-radius: 5px !important;
+            }
+
+            /* "Yes, tell me more about IOLs" button (Green) */
+            div.row-widget.stButton:first-of-type button {
+                background-color: #4CAF50 !important; /* Green */
+            }
+
+            /* "No, show me the lens options" button (Red) */
+            div.row-widget.stButton:nth-of-type(2) button {
+                background-color: #FF4B4B !important; /* Red */
+            }
+
+            /* Specifically targeting the "End Conversation" button */
+            div.row-widget.stButton.st-emotion-cache-k008qs button {
+                background-color: #FF4B4B !important; /* Red */
+                color: white !important;
+            }
+
+            /* Ensure the Send button retains its original style */
+            div.row-widget.stButton button:not(.st-emotion-cache-k008qs) {
+                background-color: #007bff !important; /* Default Send button color (change as needed) */
+                color: white !important; /* White text for Send button */
+            }
+
+            /* Hover effects */
+            .stButton > button:hover {
+                opacity: 0.8 !important;
+            }
+
+            /* Fix for overriding container styles that may affect button layout */
+            div.row-widget.stButton {
+                display: flex;
+                justify-content: flex-start !important;
+            }
+
+            /* Additional styling for sidebar elements if needed */
+            .sidebar-text {
+                color: white;
+                font-size: 1rem;
+                margin-bottom: 0.5rem;
+            }
+                
+            /* Cross button styling */
+            .st-emotion-cache-ztfqz8 {
+                display: inline-flex;
+                -webkit-box-align: center;
+                align-items: center;
+                -webkit-box-pack: center;
+                justify-content: center;
+                font-weight: 400;
+                border-radius: 0.5rem;
+                margin: 0px 0.125rem;
+                color: white;
+                width: auto;
+                user-select: none;
+                background-color: transparent;
+                border: none;
+                padding: 0.5rem;
+                font-size: 14px;
+                line-height: 1;
+                min-width: 2rem;
+                min-height: 2rem;
+            }
         </style>
     """, unsafe_allow_html=True)
 
-    # Apply custom CSS
-    st.markdown("""
-    <style>
-    .chat-bubble {
-        padding: 10px 15px;
-        border-radius: 20px;
-        margin-bottom: 10px;
-        display: inline-block;
-        max-width: 70%;
-        word-wrap: break-word;
-    }
-
-    .bot-bubble {
-        background-color: #D3D3D3;
-        float: left;
-        clear: both;
-    }
-
-    .user-bubble {
-        background-color: #87CEFA;
-        float: right;
-        clear: both;
-    }
-
-    .debug-bubble {
-        background-color: #FFB6C1;
-        float: left;
-        clear: both;
-        font-style: italic;
-    }
-
-    .chat-container {
-        margin-bottom: 20px;
-    }
-
-    /* Ensure file uploader uses light theme */
-    .stFileUploader {
-        background-color: var(--secondary-background-color);
-    }
-
-    .stFileUploader [data-testid="stFileUploadDropzone"] {
-        background-color: white;
-        border: 2px dashed #CCCCCC;
-        border-radius: 5px;
-    }
-
-    .stFileUploader [data-testid="stFileUploadDropzone"] button {
-        background-color: #4CAF50;
-        color: white;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    st.title("AI-Assistant for IOL Education")
+    # Create a sidebar
+    with st.sidebar:
+        # Add some space to push content below the logo
+        st.empty()
+        st.empty()
+        st.sidebar.image("./easyiol.png", use_column_width=True)
+        st.markdown("<p class='sidebar-text'>Please upload the file that was provided by your doctor</p>", unsafe_allow_html=True)
 
     # Initialize session state variables
     if 'messages' not in st.session_state:
@@ -468,7 +817,7 @@ def main():
     debug_print("Initializing vectorstore")
     vectorstore = load_vectorstore()
 
-    uploaded_file = st.file_uploader("Please upload the file your surgeon has provided you", type=["txt"])
+    uploaded_file = st.sidebar.file_uploader("", type=["txt"])
 
     if uploaded_file is not None and not st.session_state.greeted:
         debug_print("File uploaded, processing")
@@ -478,6 +827,9 @@ def main():
             st.session_state.prioritized_lenses = prioritized_lenses
             initial_greeting = f"Hello! I'm {doctor_name}'s virtual assistant. I'm here to help you navigate the world of intraocular lenses (IOLs) and find the perfect fit for your lifestyle. I know this process can feel a bit overwhelming, but don't worry – we'll take it step by step together!"
             name_request = "Before we begin, I'd love to know your name. What should I call you?"
+            
+            initial_greeting = process_response(initial_greeting, doctor_name)
+            name_request = process_response(name_request, doctor_name)
             
             st.session_state.messages = [
                 {"role": "system", "content": "You are an AI assistant for IOL selection."},
@@ -522,67 +874,60 @@ def main():
         st.markdown("<div style='margin-bottom: 100px;'></div>", unsafe_allow_html=True)
 
     if st.session_state.greeted:
-        with st.form(key='message_form'):
-            # Use a unique key for the text input field
-            user_input = st.text_input("You:", key=f"user_input_{st.session_state.input_key}")
-            submit_button = st.form_submit_button(label='Send')
-
-        if submit_button and user_input:
-            debug_print(f"Processing user input: {user_input}")
-            with st.spinner("Processing your input..."):
-                # Apply spell-checking in the background
-                corrected_input = fix_spelling(user_input)
-                debug_print(f"Corrected input: {corrected_input}")
+        if st.session_state.asked_name and not st.session_state.user_name:
+            # Display two input fields for first name and last name
+            with st.form(key='name_form'):
+                col1, col2 = st.columns(2)
+                with col1:
+                    first_name = st.text_input("First Name:", key="first_name")
+                with col2:
+                    last_name = st.text_input("Last Name:", key="last_name")
                 
-                st.session_state.messages.append({"role": "user", "content": corrected_input})
-                st.session_state.chat_history.append(("user", corrected_input))
-                st.session_state.question_count += 1
+                submit_button = st.form_submit_button("Submit")
+
+            if submit_button and first_name and last_name:
+                st.session_state.user_name = f"{first_name} {last_name}"
+                # Add the user's name to the chat history
+                st.session_state.messages.append({"role": "user", "content": st.session_state.user_name})
+                st.session_state.chat_history.append(("user", st.session_state.user_name))
                 
-                debug_print(f"Question count: {st.session_state.question_count}")
+                bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
+                bot_response = process_response(bot_response, st.session_state.doctor_name)
+                st.session_state.messages.append({"role": "assistant", "content": bot_response})
+                st.session_state.chat_history.append(("bot", bot_response))
+                
+                lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
+                lifestyle_question = process_response(lifestyle_question, st.session_state.doctor_name)
+                st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
+                st.session_state.chat_history.append(("bot", lifestyle_question))
+                debug_print(f"User name set and added to chat history: {st.session_state.user_name}")
+                st.session_state.asked_name = False
+                st.experimental_rerun()  # Force a rerun to update the UI
+            elif submit_button:
+                st.warning("Please enter both your first and last name.")
+        else:
+            # Check if we need to show the Yes/No buttons
+            if st.session_state.show_lens_options and st.session_state.chat_history[-1][1].endswith("suggested for you?"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Yes, tell me more about IOLs"):
+                        process_user_input("yes", vectorstore)
+                with col2:
+                    if st.button("No, show me the lens options"):
+                        process_user_input("no", vectorstore)
+            else:
+                with st.form(key='message_form'):
+                    user_input = st.text_input("You:", key=f"user_input_{st.session_state.input_key}")
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        submit_button = st.form_submit_button(label='Send')
+                    with col2:
+                        end_conversation_button = st.form_submit_button(label='End Conversation')
 
-                if st.session_state.asked_name and not st.session_state.user_name:
-                    extracted_name = extract_name(corrected_input)
-                    if extracted_name:
-                        st.session_state.user_name = extracted_name
-                        bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
-                        st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                        st.session_state.chat_history.append(("bot", bot_response))
-                        
-                        lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
-                        st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
-                        st.session_state.chat_history.append(("bot", lifestyle_question))
-                        debug_print(f"User name set: {st.session_state.user_name}")
-                    else:
-                        bot_response = "I'm sorry, I didn't catch your name. Could you please tell me your name again?"
-                        st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                        st.session_state.chat_history.append(("bot", bot_response))
-                        debug_print("Failed to extract user name")
-                elif not st.session_state.show_lens_options:
-                    st.session_state.user_lifestyle = corrected_input
-                    bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
-                    st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                    st.session_state.chat_history.append(("bot", bot_response))
-                    debug_print("Processed initial lifestyle query")
-                else:
-                    bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
-
-                    if bot_response:
-                        st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                        st.session_state.chat_history.append(("bot", bot_response))
-
-                        # Check if it's time to display the follow-up prompt (5th question and every odd question after)
-                        if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
-                            follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
-                            st.session_state.messages.append({"role": "assistant", "content": follow_up})
-                            st.session_state.chat_history.append(("bot", follow_up))
-                            debug_print(f"Follow-up prompt added to chat history (Question {st.session_state.question_count})")
-                    else:
-                        st.error("Sorry, I couldn't generate a response. Please try again.")
-                        debug_print("Failed to generate bot response")
-
-            # Increment the input key to force a reset of the input field
-            st.session_state.input_key += 1
-            st.experimental_rerun()
+                if submit_button and user_input:
+                    process_user_input(user_input, vectorstore)
+                elif end_conversation_button:
+                    end_conversation()
 
 if __name__ == "__main__":
     main()
