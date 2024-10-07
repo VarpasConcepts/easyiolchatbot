@@ -704,6 +704,19 @@ def main():
                 margin-bottom: 20px;
             }
 
+            /* Target the Send button */
+            div[data-testid="stForm"] div.row-widget.stButton > button:first-child {
+                background-color: #007bff !important;
+                color: white !important;
+            }
+
+            /* Target the End Conversation button */
+            div[data-testid="stForm"] div.row-widget.stButton > button:last-child {
+                background-color: #FF4B4B !important;
+                color: white !important;
+            }
+
+            /* Override any Streamlit-specific styles */
             .stButton > button {
                 border: none !important;
                 padding: 10px 24px !important;
@@ -717,22 +730,11 @@ def main():
                 transition: opacity 0.3s !important;
             }
 
-            /* Send button styling */
-            div[data-testid="stForm"] div.row-widget.stButton:first-child > button {
-                background-color: #007bff !important;
-                color: white !important;
-            }
-
-            /* End Conversation button styling */
-            div[data-testid="stForm"] div.row-widget.stButton:last-child > button {
-                background-color: #FF4B4B !important;
-                color: white !important;
-            }
-
-            /* Hover effects */
+            /* Hover effect */
             .stButton > button:hover {
                 opacity: 0.8 !important;
             }
+                }
 
             /* Fix for overriding container styles that may affect button layout */
             div.row-widget.stButton {
@@ -912,11 +914,6 @@ def main():
                         submit_button = st.form_submit_button(label='Send')
                     with col2:
                         end_conversation_button = st.form_submit_button(label='End Conversation')
-
-                if submit_button and user_input:
-                    process_user_input(user_input, vectorstore)
-                elif end_conversation_button:
-                    end_conversation()
 
 if __name__ == "__main__":
     main()
