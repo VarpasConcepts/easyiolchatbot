@@ -473,7 +473,7 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
     styles.add(ParagraphStyle(name='UserBubble', 
                               parent=styles['ChatBubble'],
                               alignment=TA_RIGHT, 
-                              textColor=colors.white,
+                              textColor=colors.black,
                               backColor=colors.lightblue,
                               borderColor=colors.lightblue,
                               borderWidth=1,
