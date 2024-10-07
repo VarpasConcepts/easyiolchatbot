@@ -706,7 +706,6 @@ def main():
 
             /* Button styling */
             .stButton > button {
-                color: white !important;
                 border: none !important;
                 padding: 10px 24px !important;
                 text-align: center !important;
@@ -721,23 +720,25 @@ def main():
             /* "Yes, tell me more about IOLs" button (Green) */
             div.row-widget.stButton:first-of-type button {
                 background-color: #4CAF50 !important; /* Green */
+                color: white !important;
             }
 
             /* "No, show me the lens options" button (Red) */
             div.row-widget.stButton:nth-of-type(2) button {
                 background-color: #FF4B4B !important; /* Red */
-            }
-
-            /* Specifically targeting the "End Conversation" button */
-            div.row-widget.stButton.st-emotion-cache-k008qs button {
-                background-color: #FF4B4B !important; /* Red */
                 color: white !important;
             }
 
-            /* Ensure the Send button retains its original style */
-            div.row-widget.stButton button:not(.st-emotion-cache-k008qs) {
-                background-color: #007bff !important; /* Default Send button color (change as needed) */
-                color: white !important; /* White text for Send button */
+            /* Send button styling */
+            div.row-widget.stButton button[kind="primaryFormSubmit"] {
+                background-color: #007bff !important; /* Blue */
+                color: white !important;
+            }
+
+            /* End Conversation button styling */
+            div.row-widget.stButton button:not([kind="primaryFormSubmit"]) {
+                background-color: #FF4B4B !important; /* Red */
+                color: white !important;
             }
 
             /* Hover effects */
