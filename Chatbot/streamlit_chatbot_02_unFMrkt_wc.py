@@ -47,21 +47,18 @@ def load_vectorstore():
         st.error("The FAISS index file is missing or cannot be accessed. Please check the file path and permissions.")
         debug_print(f"Error in load_vectorstore(): {e}")
         return None
-
-#Function for formatting and word replacement
+    
+    
 def format_and_replace(text, doctor_name):
     # Replace doctor-related words with the actual doctor's name
     doctor_words = ['doctor', 'surgeon', 'ophthalmologist']
     for word in doctor_words:
         # Remove "your" (case-insensitive) before the doctor's name
         text = re.sub(r'\b(?i:your\s+)?' + word + r'\b', doctor_name, text, flags=re.IGNORECASE)
-    
     # Remove any remaining "your" before the doctor's name
     text = re.sub(r'\b(?i:your)\s+' + re.escape(doctor_name), doctor_name, text)
-    
     # Add line breaks for better readability
     text = text.replace(". ", ".\n")
-    
     # Improve bullet point handling
     lines = text.split('\n')
     formatted_lines = []
@@ -75,10 +72,8 @@ def format_and_replace(text, doctor_name):
                     formatted_lines.append(f"  • {point.strip()}")
         else:
             formatted_lines.append(line)
-    
     # Join the lines back together
     text = '\n'.join(formatted_lines)
-    
     return text
 
 def process_response(response, doctor_name):
