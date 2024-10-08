@@ -328,13 +328,7 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         # Add message about cataract surgery and ask if they want to know more about IOLs
         cataract_message = "I understand that cataract surgery can feel overwhelming, but don't worry - we'll take it step by step together. Would you like to know more about intraocular lenses (IOLs) before we look at the options your surgeon has suggested for you?"
         
-        st.session_state.messages.append({"role": "assistant", "content": thank_you_response})
-        st.session_state.chat_history.append(("bot", thank_you_response))
-        
-        st.session_state.messages.append({"role": "assistant", "content": cataract_message})
-        st.session_state.chat_history.append(("bot", cataract_message))
-        
-        return "SHOW_BUTTONS"
+        return [thank_you_response, cataract_message]
 
     # Check if the user wants to know more about IOLs
     if query.lower() == "yes":
@@ -342,9 +336,6 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
             {"role": "system", "content": "You are an AI assistant explaining IOLs to a patient."},
             {"role": "user", "content": f"Explain what intraocular lenses (IOLs) are, relating the explanation to this lifestyle: {user_lifestyle}"}
         ])
-        
-        st.session_state.messages.append({"role": "assistant", "content": iols_explanation})
-        st.session_state.chat_history.append(("bot", iols_explanation))
         
         # Separate message for lens suggestions
         lens_suggestions = "Based on your lifestyle and visual needs," + st.session_state.doctor_name + " has suggested the following lenses for you:\n\n"
@@ -354,10 +345,7 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
                 lens_suggestions += f"• {lens}: {description}\n\n"
         lens_suggestions += "Which lens would you like to know more about?"
         
-        st.session_state.messages.append({"role": "assistant", "content": lens_suggestions})
-        st.session_state.chat_history.append(("bot", lens_suggestions))
-        
-        return "WAIT_FOR_LENS_CHOICE"
+        return [iols_explanation, lens_suggestions]
     
     elif query.lower() == "no":
         lens_suggestions = "Certainly!" + st.session_state.doctor_name + " has suggested the following lenses based on your lifestyle and visual needs:\n\n"
@@ -367,20 +355,12 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
                 lens_suggestions += f"• {lens}: {description}\n\n"
         lens_suggestions += "Which lens would you like to know more about?"
         
-        st.session_state.messages.append({"role": "assistant", "content": lens_suggestions})
-        st.session_state.chat_history.append(("bot", lens_suggestions))
-        
-        return "WAIT_FOR_LENS_CHOICE"
+        return [lens_suggestions]
     
     # For all other queries, use the existing logic
     bot_response = process_query_existing(query, vectorstore, user_lifestyle, prioritized_lenses)
 
-    if bot_response == "SHOW_BUTTONS" or bot_response == "WAIT_FOR_LENS_CHOICE":
-        st.experimental_rerun()
-    elif bot_response:
-        st.session_state.messages.append({"role": "assistant", "content": bot_response})
-        st.session_state.chat_history.append(("bot", bot_response))
-
+    if bot_response and bot_response not in ["SHOW_BUTTONS", "WAIT_FOR_LENS_CHOICE"]:
         # Generate potential questions after every bot response
         current_context = f"User lifestyle: {user_lifestyle}\nPrioritized lenses: {', '.join(prioritized_lenses)}\nLast bot response: {bot_response}"
         chat_history = "\n".join([f"{role}: {content}" for role, content in st.session_state.chat_history[-5:]])  # Use last 5 messages for context
@@ -389,12 +369,11 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
 
         if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
             follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
-            st.session_state.messages.append({"role": "assistant", "content": follow_up})
-            st.session_state.chat_history.append(("bot", follow_up))
-            debug_print(f"Follow-up prompt added to chat history (Question {st.session_state.question_count})")
+            return [bot_response, follow_up]
+        else:
+            return [bot_response]
     else:
-        st.error("Sorry, I couldn't generate a response. Please try again.")
-        debug_print("Failed to generate bot response")
+        return bot_response
 
     return bot_response
 
@@ -603,19 +582,14 @@ def process_user_input(user_input, vectorstore):
         
         debug_print(f"Question count: {st.session_state.question_count}")
 
-        bot_response = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
+        bot_responses = process_query(corrected_input, vectorstore, st.session_state.user_lifestyle, st.session_state.prioritized_lenses)
 
-        if bot_response == "SHOW_BUTTONS" or bot_response == "WAIT_FOR_LENS_CHOICE":
+        if bot_responses == "SHOW_BUTTONS" or bot_responses == "WAIT_FOR_LENS_CHOICE":
             st.experimental_rerun()
-        elif bot_response:
-            st.session_state.messages.append({"role": "assistant", "content": bot_response})
-            st.session_state.chat_history.append(("bot", bot_response))
-
-            if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
-                follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
-                st.session_state.messages.append({"role": "assistant", "content": follow_up})
-                st.session_state.chat_history.append(("bot", follow_up))
-                debug_print(f"Follow-up prompt added to chat history (Question {st.session_state.question_count})")
+        elif bot_responses:
+            for response in bot_responses:
+                st.session_state.messages.append({"role": "assistant", "content": response})
+                st.session_state.chat_history.append(("bot", response))
         else:
             st.error("Sorry, I couldn't generate a response. Please try again.")
             debug_print("Failed to generate bot response")
