@@ -690,6 +690,10 @@ def main():
                 color: #000000 !important;
                 border: 1px solid #cccccc !important;
             }
+            /* Add this new rule to change the font size of the text input label */
+            .stTextInput > label {
+                font-size: 25px !important;  /* Adjust this value as needed */
+            }
 
             /* Chat bubble styling */
             .chat-bubble {
