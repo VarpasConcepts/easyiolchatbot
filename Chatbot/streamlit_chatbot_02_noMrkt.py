@@ -933,55 +933,41 @@ def main():
 
             if submit_button and first_name and last_name:
                 st.session_state.user_name = f"{first_name} {last_name}"
-                # Add the user's name to the chat history
-                st.session_state.messages.append({"role": "user", "content": st.session_state.user_name})
-                st.session_state.chat_history.append(("user", st.session_state.user_name))
-                
-                bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
-                bot_response = process_response(bot_response, st.session_state.doctor_name)
-                st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                st.session_state.chat_history.append(("bot", bot_response))
-                
-                lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
-                lifestyle_question = process_response(lifestyle_question, st.session_state.doctor_name)
-                st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
-                st.session_state.chat_history.append(("bot", lifestyle_question))
-                debug_print(f"User name set and added to chat history: {st.session_state.user_name}")
-                st.session_state.asked_name = False
-                st.experimental_rerun()  # Force a rerun to update the UI
+                process_user_input(st.session_state.user_name, vectorstore)
+                st.experimental_rerun()
             elif submit_button:
                 st.warning("Please enter both your first and last name.")
+    else:
+        # Check if we need to show the Yes/No buttons
+        if st.session_state.show_lens_options and st.session_state.chat_history[-1][0] == "bot" and st.session_state.chat_history[-1][1].endswith("suggested for you?"):
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Yes, tell me more about IOLs"):
+                    process_user_input("yes", vectorstore)
+            with col2:
+                if st.button("No, show me the lens options"):
+                    process_user_input("no", vectorstore)
         else:
-            # Check if we need to show the Yes/No buttons
-            if st.session_state.show_lens_options and st.session_state.chat_history[-1][1].endswith("suggested for you?"):
-                col1, col2 = st.columns(2)
+            # Display potential questions as buttons
+            if 'potential_questions' in st.session_state and st.session_state.potential_questions:
+                st.write("You might want to ask:")
+                for question in st.session_state.potential_questions:
+                    if st.button(question):
+                        process_user_input(question, vectorstore)
+
+            # Display text input for custom questions
+            with st.form(key='message_form'):
+                user_input = st.text_input("Or ask your own question:", key=f"user_input_{st.session_state.input_key}")
+                col1, col2 = st.columns([3, 1])
                 with col1:
-                    if st.button("Yes, tell me more about IOLs"):
-                        process_user_input("yes", vectorstore)
+                    submit_button = st.form_submit_button(label='Send')
                 with col2:
-                    if st.button("No, show me the lens options"):
-                        process_user_input("no", vectorstore)
-            else:
-                # Display potential questions as buttons
-                if 'potential_questions' in st.session_state and st.session_state.potential_questions:
-                    st.write("You might want to ask:")
-                    for question in st.session_state.potential_questions:
-                        if st.button(question):
-                            process_user_input(question, vectorstore)
+                    end_conversation_button = st.form_submit_button(label='End Conversation')
 
-                # Display text input for custom questions
-                with st.form(key='message_form'):
-                    user_input = st.text_input("Or ask your own question:", key=f"user_input_{st.session_state.input_key}")
-                    col1, col2 = st.columns([3, 1])
-                    with col1:
-                        submit_button = st.form_submit_button(label='Send')
-                    with col2:
-                        end_conversation_button = st.form_submit_button(label='End Conversation')
-
-                if submit_button and user_input:
-                    process_user_input(user_input, vectorstore)
-                elif end_conversation_button:
-                    end_conversation()
+            if submit_button and user_input:
+                process_user_input(user_input, vectorstore)
+            elif end_conversation_button:
+                end_conversation()
 
 if __name__ == "__main__":
     main()
