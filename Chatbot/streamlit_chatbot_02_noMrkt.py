@@ -668,7 +668,7 @@ def main():
             /* Root variables */
             :root {
                 --secondary-background-color: #f0f2f6;
-                font-size: 40px;
+                font-size: 28px;
             }
 
             [data-testid="stSidebar"] [data-testid="stSidebarNav"] button[kind="header"] {
