@@ -47,21 +47,18 @@ def load_vectorstore():
         st.error("The FAISS index file is missing or cannot be accessed. Please check the file path and permissions.")
         debug_print(f"Error in load_vectorstore(): {e}")
         return None
-
-#Function for formatting and word replacement
+    
+    
 def format_and_replace(text, doctor_name):
     # Replace doctor-related words with the actual doctor's name
     doctor_words = ['doctor', 'surgeon', 'ophthalmologist']
     for word in doctor_words:
         # Remove "your" (case-insensitive) before the doctor's name
         text = re.sub(r'\b(?i:your\s+)?' + word + r'\b', doctor_name, text, flags=re.IGNORECASE)
-    
     # Remove any remaining "your" before the doctor's name
     text = re.sub(r'\b(?i:your)\s+' + re.escape(doctor_name), doctor_name, text)
-    
     # Add line breaks for better readability
     text = text.replace(". ", ".\n")
-    
     # Improve bullet point handling
     lines = text.split('\n')
     formatted_lines = []
@@ -75,10 +72,8 @@ def format_and_replace(text, doctor_name):
                     formatted_lines.append(f"  • {point.strip()}")
         else:
             formatted_lines.append(line)
-    
     # Join the lines back together
     text = '\n'.join(formatted_lines)
-    
     return text
 
 def process_response(response, doctor_name):
@@ -112,25 +107,28 @@ def query_knowledge_base(query, vectorstore):
 def chat_with_gpt(messages):
     debug_print(f"Entering chat_with_gpt() with {len(messages)} messages")
     try:
-        # Add a system message to encourage concise responses
+        # Add a system message to encourage nurse-like responses
         system_message = {
             "role": "system",
             "content": f'''
-                "You are a friendly and empathetic assistant designed to help cataract patients understand intraocular lens (IOL) options. Your primary goals are to:
-                    Provide clear, concise information about IOLs (aim for 50-100 words per response).
-                    Relate all information to the user's lifestyle as much as possible.
-                    When information about a particular lens is asked, list out the definition, the pros and the cons of that lens.
-                    When asked to compare between two or more lens types, give out the pros and cons of the lens relating them to the user's lifestyle information.
-                    Use simple language, avoiding medical jargon when possible.
-                    Encourage patients to ask questions for better understanding.
-                    Never recommend specific IOLs or treatments.
-                    Always advise consulting their ophthalmologist for personalized recommendations.
+                "Hi there! You're a friendly nurse at our cataract surgery clinic. Your job is to chat with patients about intraocular lenses (IOLs) in a warm, caring way. Here's what we need you to do:
 
-                Important: You must never state or imply that one lens is superior to another. Your role is to provide factual information about each lens type without suggesting that any particular lens would be better for the user. Avoid any language that could be interpreted as a recommendation.
+                - Keep things simple and easy to understand. Aim for about 50-100 words per reply.
+                - Try to relate the IOL info to the patient's day-to-day life when you can.
+                - If someone asks about a specific lens, give them a quick rundown of what it is, plus the good and not-so-good points.
+                - When comparing lenses, talk about the pros and cons in terms of how they might fit into the patient's lifestyle.
+                - Avoid medical jargon - explain things like you're chatting with a friend.
+                - Encourage patients to speak up if they're unsure about anything. We want them to feel comfortable asking questions!
+                - Remember, we can't recommend specific IOLs or treatments. That's the doctor's job.
+                - Always remind patients to talk to their eye doctor for personalized advice.
 
-                Keep your tone warm and supportive. If a patient seems confused or hesitant, offer to explain things differently. Emphasize the importance of making informed decisions based on lifestyle needs and doctor's advice. If asked about specific IOL recommendations, politely redirect the patient to their doctor.
+                Super important: We never say one lens is better than another. Your role is to give the facts about each lens type without pushing the patient towards any particular choice. Steer clear of anything that sounds like you're recommending a specific lens.
 
-                Remember, your role is to educate and support, not to make medical decisions or comparisons that could be seen as recommendations. Prioritize patient understanding and comfort in every interaction, while maintaining strict neutrality regarding lens options."
+                Keep your tone warm and friendly. If a patient seems confused, offer to explain things in a different way. Emphasize how important it is for them to make informed decisions based on their lifestyle and their doctor's advice. If they ask for specific IOL recommendations, gently remind them that their doctor is the best person to help with that decision.
+
+                Remember, you're here to educate and support, not to make medical decisions. Your main goal is to help patients understand their options and feel comfortable, while staying neutral about the different lens choices.
+
+                You've got this! Let's help our patients feel informed and cared for!"
                 '''
         }
         # Insert the system message at the beginning of the messages list
@@ -148,6 +146,30 @@ def chat_with_gpt(messages):
         st.error(f"Error generating ChatGPT response: {e}")
         debug_print(f"Error in chat_with_gpt(): {e}")
         return None
+    
+def generate_potential_questions(current_context, chat_history):
+    prompt = f"""
+    Based on the following conversation context and chat history, generate 3-5 potential follow-up questions that the user might want to ask about intraocular lenses (IOLs). 
+    These questions should be relevant, concise, and diverse.
+
+    Current context: {current_context}
+    Chat history: {chat_history}
+
+    Generate the questions in the following format:
+    1. Question 1
+    2. Question 2
+    3. Question 3
+    ...
+
+    Questions:
+    """
+    messages = [{"role": "user", "content": prompt}]
+    response = chat_with_gpt(messages)
+    
+    # Parse the response into a list of questions
+    questions = [q.split('. ', 1)[1] for q in response.split('\n') if q.strip() and q[0].isdigit()]
+    
+    return questions
 
 def process_query_existing(query, vectorstore, user_lifestyle, prioritized_lenses):
     debug_print(f"Entering process_query_existing() with query: {query}")
@@ -351,7 +373,30 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         return "WAIT_FOR_LENS_CHOICE"
     
     # For all other queries, use the existing logic
-    return process_query_existing(query, vectorstore, user_lifestyle, prioritized_lenses)
+    bot_response = process_query_existing(query, vectorstore, user_lifestyle, prioritized_lenses)
+
+    if bot_response == "SHOW_BUTTONS" or bot_response == "WAIT_FOR_LENS_CHOICE":
+        st.experimental_rerun()
+    elif bot_response:
+        st.session_state.messages.append({"role": "assistant", "content": bot_response})
+        st.session_state.chat_history.append(("bot", bot_response))
+
+        # Generate potential questions after every bot response
+        current_context = f"User lifestyle: {user_lifestyle}\nPrioritized lenses: {', '.join(prioritized_lenses)}\nLast bot response: {bot_response}"
+        chat_history = "\n".join([f"{role}: {content}" for role, content in st.session_state.chat_history[-5:]])  # Use last 5 messages for context
+        potential_questions = generate_potential_questions(current_context, chat_history)
+        st.session_state.potential_questions = potential_questions
+
+        if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
+            follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
+            st.session_state.messages.append({"role": "assistant", "content": follow_up})
+            st.session_state.chat_history.append(("bot", follow_up))
+            debug_print(f"Follow-up prompt added to chat history (Question {st.session_state.question_count})")
+    else:
+        st.error("Sorry, I couldn't generate a response. Please try again.")
+        debug_print("Failed to generate bot response")
+
+    return bot_response
 
 def get_lens_description(lens_name, user_lifestyle):
     debug_print(f"Entering get_lens_description() for lens: {lens_name}")
@@ -478,7 +523,7 @@ def create_pdf(chat_history, summary, user_name, doctor_name, user_lifestyle, pr
     styles.add(ParagraphStyle(name='UserBubble', 
                               parent=styles['ChatBubble'],
                               alignment=TA_RIGHT, 
-                              textColor=colors.white,
+                              textColor=colors.black,
                               backColor=colors.lightblue,
                               borderColor=colors.lightblue,
                               borderWidth=1,
@@ -623,6 +668,7 @@ def main():
             /* Root variables */
             :root {
                 --secondary-background-color: #f0f2f6;
+                font-size: 40px;
             }
 
             [data-testid="stSidebar"] [data-testid="stSidebarNav"] button[kind="header"] {
@@ -916,8 +962,16 @@ def main():
                     if st.button("No, show me the lens options"):
                         process_user_input("no", vectorstore)
             else:
+                # Display potential questions as buttons
+                if 'potential_questions' in st.session_state and st.session_state.potential_questions:
+                    st.write("You might want to ask:")
+                    for question in st.session_state.potential_questions:
+                        if st.button(question):
+                            process_user_input(question, vectorstore)
+
+                # Display text input for custom questions
                 with st.form(key='message_form'):
-                    user_input = st.text_input("You:", key=f"user_input_{st.session_state.input_key}")
+                    user_input = st.text_input("Or ask your own question:", key=f"user_input_{st.session_state.input_key}")
                     col1, col2 = st.columns([3, 1])
                     with col1:
                         submit_button = st.form_submit_button(label='Send')
