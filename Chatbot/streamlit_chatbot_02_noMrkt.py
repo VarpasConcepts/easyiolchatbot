@@ -933,27 +933,20 @@ def main():
 
             if submit_button and first_name and last_name:
                 st.session_state.user_name = f"{first_name} {last_name}"
-                # Add the user's name to the chat history
-                st.session_state.messages.append({"role": "user", "content": st.session_state.user_name})
-                st.session_state.chat_history.append(("user", st.session_state.user_name))
-                
-                bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
-                bot_response = process_response(bot_response, st.session_state.doctor_name)
-                st.session_state.messages.append({"role": "assistant", "content": bot_response})
-                st.session_state.chat_history.append(("bot", bot_response))
-                
-                lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
-                lifestyle_question = process_response(lifestyle_question, st.session_state.doctor_name)
-                st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
-                st.session_state.chat_history.append(("bot", lifestyle_question))
-                debug_print(f"User name set and added to chat history: {st.session_state.user_name}")
-                st.session_state.asked_name = False
-                st.experimental_rerun()  # Force a rerun to update the UI
+                process_user_input(st.session_state.user_name, vectorstore)
+                st.experimental_rerun()
             elif submit_button:
                 st.warning("Please enter both your first and last name.")
         else:
+            # Display chat history
+            for role, message in st.session_state.chat_history:
+                if role == "bot":
+                    st.markdown(f'<div class="chat-bubble bot-bubble">{message}</div>', unsafe_allow_html=True)
+                elif role == "user":
+                    st.markdown(f'<div class="chat-bubble user-bubble">{message}</div>', unsafe_allow_html=True)
+
             # Check if we need to show the Yes/No buttons
-            if st.session_state.show_lens_options and st.session_state.chat_history[-1][1].endswith("suggested for you?"):
+            if st.session_state.show_lens_options and st.session_state.chat_history[-1][0] == "bot" and st.session_state.chat_history[-1][1].endswith("suggested for you?"):
                 col1, col2 = st.columns(2)
                 with col1:
                     if st.button("Yes, tell me more about IOLs"):
