@@ -56,6 +56,14 @@ def generate_audio(text):
     sound_file.seek(0)
     return sound_file
 
+def add_bot_response(response):
+    audio_file = generate_audio(response)
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": response,
+        "audio": audio_file
+    })
+    st.session_state.chat_history.append(("bot", response))
     
 def format_and_replace(text, doctor_name):
     # Replace doctor-related words with the actual doctor's name
@@ -327,28 +335,17 @@ def get_product_example(lens_type, vectorstore):
 def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
     debug_print(f"Entering process_query() with query: {query}")
     
-    def add_bot_response(response):
-        audio_file = generate_audio(response)
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": response,
-            "audio": audio_file
-        })
-        st.session_state.chat_history.append(("bot", response))
-
     # Check if this is the first response after user shares their lifestyle
     if not st.session_state.show_lens_options:
         st.session_state.show_lens_options = True
         
-        # Thank the user for sharing lifestyle details
         thank_you_response = f"Thank you for sharing those details about your lifestyle, {st.session_state.user_name}. It's really helpful to understand your daily activities and visual needs."
-        add_bot_response(thank_you_response)
-        
-        # Add message about cataract surgery and ask if they want to know more about IOLs
         cataract_message = "I understand that cataract surgery can feel overwhelming, but don't worry - we'll take it step by step together. Would you like to know more about intraocular lenses (IOLs) before we look at the options your surgeon has suggested for you?"
+        
+        add_bot_response(thank_you_response)
         add_bot_response(cataract_message)
         
-        return [thank_you_response, cataract_message]
+        return
 
     # Check if the user wants to know more about IOLs
     if query.lower() == "yes":
@@ -358,7 +355,6 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         ])
         add_bot_response(iols_explanation)
         
-        # Separate message for lens suggestions
         lens_suggestions = f"Based on your lifestyle and visual needs, {st.session_state.doctor_name} has suggested the following lenses for you:\n\n"
         for lens in prioritized_lenses:
             description = get_lens_description(lens, user_lifestyle)
@@ -367,7 +363,7 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         lens_suggestions += "Which lens would you like to know more about?"
         add_bot_response(lens_suggestions)
         
-        return [iols_explanation, lens_suggestions]
+        return
     
     elif query.lower() == "no":
         lens_suggestions = f"Certainly! {st.session_state.doctor_name} has suggested the following lenses based on your lifestyle and visual needs:\n\n"
@@ -378,7 +374,7 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         lens_suggestions += "Which lens would you like to know more about?"
         add_bot_response(lens_suggestions)
         
-        return [lens_suggestions]
+        return
     
     # For all other queries, use the existing logic
     bot_response = process_query_existing(query, vectorstore, user_lifestyle, prioritized_lenses)
@@ -391,16 +387,12 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         st.session_state.potential_questions = potential_questions
 
         add_bot_response(bot_response)
-        responses = [bot_response]
 
         if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
             follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
             add_bot_response(follow_up)
-            responses.append(follow_up)
-        
-        return responses
-    else:
-        return bot_response
+    
+    return bot_response
 
 def get_lens_description(lens_name, user_lifestyle):
     debug_print(f"Entering get_lens_description() for lens: {lens_name}")
