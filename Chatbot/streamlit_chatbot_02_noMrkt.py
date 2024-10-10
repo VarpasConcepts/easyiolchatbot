@@ -15,6 +15,7 @@ from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from io import BytesIO
 import re
+from gtts import gTTS
 
 # Add a debug flag
 DEBUG = False
@@ -47,7 +48,14 @@ def load_vectorstore():
         st.error("The FAISS index file is missing or cannot be accessed. Please check the file path and permissions.")
         debug_print(f"Error in load_vectorstore(): {e}")
         return None
-    
+
+def generate_audio(text):
+    sound_file = BytesIO()
+    tts = gTTS(text, lang='en')
+    tts.write_to_fp(sound_file)
+    sound_file.seek(0)
+    return sound_file
+
     
 def format_and_replace(text, doctor_name):
     # Replace doctor-related words with the actual doctor's name
@@ -328,7 +336,14 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         # Add message about cataract surgery and ask if they want to know more about IOLs
         cataract_message = "I understand that cataract surgery can feel overwhelming, but don't worry - we'll take it step by step together. Would you like to know more about intraocular lenses (IOLs) before we look at the options your surgeon has suggested for you?"
         
-        return [thank_you_response, cataract_message]
+        responses = [thank_you_response, cataract_message]
+        audio_files = [generate_audio(resp) for resp in responses]
+        
+        for response, audio in zip(responses, audio_files):
+            st.session_state.messages.append({"role": "assistant", "content": response, "audio": audio})
+            st.session_state.chat_history.append(("bot", response))
+        
+        return responses
 
     # Check if the user wants to know more about IOLs
     if query.lower() == "yes":
@@ -345,7 +360,14 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
                 lens_suggestions += f"• {lens}: {description}\n\n"
         lens_suggestions += "Which lens would you like to know more about?"
         
-        return [iols_explanation, lens_suggestions]
+        responses = [iols_explanation, lens_suggestions]
+        audio_files = [generate_audio(resp) for resp in responses]
+        
+        for response, audio in zip(responses, audio_files):
+            st.session_state.messages.append({"role": "assistant", "content": response, "audio": audio})
+            st.session_state.chat_history.append(("bot", response))
+        
+        return responses
     
     elif query.lower() == "no":
         lens_suggestions = "Certainly!" + st.session_state.doctor_name + " has suggested the following lenses based on your lifestyle and visual needs:\n\n"
@@ -354,6 +376,10 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
             if description:
                 lens_suggestions += f"• {lens}: {description}\n\n"
         lens_suggestions += "Which lens would you like to know more about?"
+        
+        audio_file = generate_audio(lens_suggestions)
+        st.session_state.messages.append({"role": "assistant", "content": lens_suggestions, "audio": audio_file})
+        st.session_state.chat_history.append(("bot", lens_suggestions))
         
         return [lens_suggestions]
     
@@ -367,11 +393,18 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         potential_questions = generate_potential_questions(current_context, chat_history)
         st.session_state.potential_questions = potential_questions
 
+        responses = [bot_response]
         if st.session_state.question_count >= 5 and st.session_state.question_count % 2 == 1:
             follow_up = "I want to make sure you have all the information you need about IOLs. Is there anything else you're curious about or would like me to explain further?"
-            return [bot_response, follow_up]
-        else:
-            return [bot_response]
+            responses.append(follow_up)
+        
+        audio_files = [generate_audio(resp) for resp in responses]
+        
+        for response, audio in zip(responses, audio_files):
+            st.session_state.messages.append({"role": "assistant", "content": response, "audio": audio})
+            st.session_state.chat_history.append(("bot", response))
+        
+        return responses
     else:
         return bot_response
 
@@ -882,6 +915,10 @@ def main():
                 {message}
                 </div>
                 """, unsafe_allow_html=True)
+                # Find the corresponding audio file in messages
+                audio_file = next((m['audio'] for m in st.session_state.messages if m['role'] == 'assistant' and m['content'] == message), None)
+                if audio_file:
+                    st.audio(audio_file)
             elif role == "user":
                 st.markdown(f"""
                 <div class="chat-bubble user-bubble">
