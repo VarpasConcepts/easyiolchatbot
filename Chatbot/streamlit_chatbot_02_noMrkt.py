@@ -448,12 +448,26 @@ def fix_spelling(query):
     return corrected_query.strip()
 
 def text_to_speech(text):
-    tts = gTTS(text=text, lang='en')
-    audio_buffer = BytesIO()
-    tts.write_to_fp(audio_buffer)
-    audio_base64 = base64.b64encode(audio_buffer.getvalue()).decode()
-    audio_html = f'<audio controls style="height:30px; width:200px;"><source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3"></audio>'
-    return audio_html
+    print(f"Generating speech for: {text[:50]}...")  # Print first 50 chars
+    try:
+        tts = gTTS(text=text, lang='en')
+        audio_buffer = BytesIO()
+        tts.write_to_fp(audio_buffer)
+        audio_buffer.seek(0)
+        print("Audio generated successfully")
+        return audio_buffer
+    except Exception as e:
+        print(f"Error in text_to_speech: {str(e)}")
+        return None
+
+def autoplay_audio(audio_file, autoplay=False):
+    b64 = base64.b64encode(audio_file.getvalue()).decode()
+    md = f"""
+        <audio id="audioTag" controls {"autoplay" if autoplay else ""}>
+            <source src="data:audio/mp3;base64,{b64}" type="audio/mpeg">
+        </audio>
+    """
+    st.markdown(md, unsafe_allow_html=True)
 
 def generate_summary(chat_history):
     debug_print("Entering generate_summary()")
@@ -912,9 +926,10 @@ def main():
             st.error("Unable to process the uploaded file. Please check the file format.")
             debug_print("Error processing uploaded file")
 
+# Chat bubble display
     chat_container = st.container()
     with chat_container:
-        for role, message in st.session_state.chat_history:
+        for i, (role, message) in enumerate(st.session_state.chat_history):
             if role == "bot":
                 col1, col2 = st.columns([0.9, 0.1])
                 with col1:
@@ -924,12 +939,14 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                 with col2:
-                    st.markdown(f"""
-                    <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
-                        <button onclick="toggleAudio(this)" class="tts-button" data-message="{message}">🔊</button>
-                    </div>
-                    <div style="display: none;">{text_to_speech(message)}</div>
-                    """, unsafe_allow_html=True)
+                    print(f"Generating audio for: {message[:50]}...")  # Print first 50 chars
+                    audio_file = text_to_speech(message)
+                    if audio_file:
+                        st.button("🔊", key=f"play_{i}", 
+                                on_click=lambda af=audio_file: autoplay_audio(af))
+                    else:
+                        st.write("🔇")
+                print("Audio button added")
             elif role == "user":
                 st.markdown(f"""
                 <div class="chat-bubble user-bubble">
