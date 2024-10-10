@@ -59,3 +59,4 @@ watchdog==3.0.0
 yarl==1.9.6
 zipp==3.17.0
 reportlab==4.0.4
+gTTS==2.3.2
