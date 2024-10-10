@@ -15,6 +15,8 @@ from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from io import BytesIO
 import re
+from gtts import gTTS
+import base64
 
 # Add a debug flag
 DEBUG = False
@@ -445,6 +447,14 @@ def fix_spelling(query):
     debug_print(f"Spell-check complete. Corrected query: {corrected_query}")
     return corrected_query.strip()
 
+def text_to_speech(text):
+    tts = gTTS(text=text, lang='en')
+    audio_buffer = BytesIO()
+    tts.write_to_fp(audio_buffer)
+    audio_base64 = base64.b64encode(audio_buffer.getvalue()).decode()
+    audio_html = f'<audio controls style="height:30px; width:200px;"><source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3"></audio>'
+    return audio_html
+
 def generate_summary(chat_history):
     debug_print("Entering generate_summary()")
     summary_prompt = f"""
@@ -804,7 +814,37 @@ def main():
                 min-width: 2rem;
                 min-height: 2rem;
             }
+                
+            .tts-button {
+                background: none;
+                border: none;
+                font-size: 20px;
+                cursor: pointer;
+                padding: 5px;
+                border-radius: 50%;
+                transition: background-color 0.3s;
+            }
+
+            .tts-button:hover {
+                background-color: rgba(0, 0, 0, 0.1);
+            }
         </style>
+                
+        <script>
+            function toggleAudio(button) {
+                var audioContainer = button.parentElement.nextElementSibling;
+                var audioElement = audioContainer.querySelector('audio');
+        
+                if (audioElement.paused) {
+                    audioElement.play();
+                    button.textContent = '🔇';
+                } else {
+                    audioElement.pause();
+                    audioElement.currentTime = 0;
+                    button.textContent = '🔊';
+                }
+    }
+    </script>
     """, unsafe_allow_html=True)
 
     # Create a sidebar
@@ -872,16 +912,24 @@ def main():
             st.error("Unable to process the uploaded file. Please check the file format.")
             debug_print("Error processing uploaded file")
 
-    # Chat bubble display
     chat_container = st.container()
     with chat_container:
         for role, message in st.session_state.chat_history:
             if role == "bot":
-                st.markdown(f"""
-                <div class="chat-bubble bot-bubble">
-                {message}
-                </div>
-                """, unsafe_allow_html=True)
+                col1, col2 = st.columns([0.9, 0.1])
+                with col1:
+                    st.markdown(f"""
+                    <div class="chat-bubble bot-bubble">
+                    {message}
+                    </div>
+                    """, unsafe_allow_html=True)
+                with col2:
+                    st.markdown(f"""
+                    <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                        <button onclick="toggleAudio(this)" class="tts-button" data-message="{message}">🔊</button>
+                    </div>
+                    <div style="display: none;">{text_to_speech(message)}</div>
+                    """, unsafe_allow_html=True)
             elif role == "user":
                 st.markdown(f"""
                 <div class="chat-bubble user-bubble">
