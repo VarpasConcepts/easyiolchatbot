@@ -880,9 +880,13 @@ def main():
             }
             .stAudio > div {
                 height: 40px;
+                max-width: 300px;
             }
             .stAudio > div > div {
                 height: 40px;
+            }
+            .stAudio > div > div > div > div > div {
+                max-width: 300px;  /* Adjust this value as needed */
             }
             .stButton > button {
                 margin-top: 0;
