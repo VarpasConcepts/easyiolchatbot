@@ -86,7 +86,6 @@ def process_response(response, doctor_name):
 
 # Add this function for text-to-speech conversion
 def text_to_speech(text, voice_type="alloy"):
-    st.write("Starting text-to-speech conversion")
     try:
         response = client.audio.speech.create(
             model="tts-1",
@@ -94,15 +93,13 @@ def text_to_speech(text, voice_type="alloy"):
             input=text
         )
         
-        # Create a temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
             tmp_file.write(response.content)
             audio_file_path = tmp_file.name
         
-        st.write(f"Audio file saved to {audio_file_path}")
         return audio_file_path
     except Exception as e:
-        st.error(f"Error in text-to-speech conversion: {str(e)}")
+        st.error("An error occurred during text-to-speech conversion.")
         return None
 
 def display_chat_bubble(role, message):
@@ -116,34 +113,20 @@ def display_chat_bubble(role, message):
             """, unsafe_allow_html=True)
         with col2:
             if st.button("🔊", key=f"tts_{hash(message)}"):
-                st.write("TTS button clicked")
                 speech_file_path = text_to_speech(message)
                 if speech_file_path and os.path.exists(speech_file_path):
-                    st.write(f"Audio file generated: {speech_file_path}")
-                    try:
-                        with open(speech_file_path, "rb") as audio_file:
-                            audio_bytes = audio_file.read()
-                        st.audio(audio_bytes, format="audio/mp3")
-                        st.download_button(
-                            label="Download Speech",
-                            data=audio_bytes,
-                            file_name="speech.mp3",
-                            mime="audio/mp3"
-                        )
-                        st.write("Audio playback and download button added")
-                    except Exception as e:
-                        st.error(f"Error playing audio: {str(e)}")
-                else:
-                    st.error("Failed to generate audio file")
+                    with open(speech_file_path, "rb") as audio_file:
+                        audio_bytes = audio_file.read()
+                    st.audio(audio_bytes, format="audio/mp3")
+                    st.download_button(
+                        label="Download Speech",
+                        data=audio_bytes,
+                        file_name="speech.mp3",
+                        mime="audio/mp3"
+                    )
     elif role == "user":
         st.markdown(f"""
         <div class="chat-bubble user-bubble">
-        {message}
-        </div>
-        """, unsafe_allow_html=True)
-    elif role == "debug":
-        st.markdown(f"""
-        <div class="chat-bubble debug-bubble">
         {message}
         </div>
         """, unsafe_allow_html=True)
