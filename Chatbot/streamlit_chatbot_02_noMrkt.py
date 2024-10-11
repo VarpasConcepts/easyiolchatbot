@@ -15,6 +15,9 @@ from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from io import BytesIO
 import re
+from pathlib import Path
+from pydub import AudioSegment
+import uuid
 
 # Add a debug flag
 DEBUG = False
@@ -79,6 +82,63 @@ def format_and_replace(text, doctor_name):
 def process_response(response, doctor_name):
     formatted_response = format_and_replace(response, doctor_name)
     return formatted_response
+
+# Add this function for text-to-speech conversion
+def text_to_speech(text, voice_type="alloy"):
+    max_length = 4096
+    chunks = [text[i:i + max_length] for i in range(0, len(text), max_length)]
+    audio_files = []
+
+    for i, chunk in enumerate(chunks):
+        try:
+            response = client.audio.speech.create(model="tts-1",
+                                                  voice=voice_type,
+                                                  input=chunk)
+            speech_file_path = Path(f"chunk_{i}.mp3")
+            response.stream_to_file(speech_file_path)
+            audio_files.append(AudioSegment.from_mp3(speech_file_path))
+        except Exception as e:
+            st.error(f"Error in text-to-speech conversion for chunk {i}: {e}")
+            return None
+
+    # Combine audio files into one
+    combined = AudioSegment.empty()
+    for audio in audio_files:
+        combined += audio
+
+    # Generate a unique filename for the combined audio
+    unique_filename = f"combined_speech_{uuid.uuid4()}.mp3"
+    combined_file_path = Path(unique_filename)
+    combined.export(combined_file_path, format="mp3")
+    return combined_file_path
+
+# Modify the chat bubble display function to include TTS button
+def display_chat_bubble(role, message):
+    if role == "bot":
+        col1, col2 = st.columns([0.9, 0.1])
+        with col1:
+            st.markdown(f"""
+            <div class="chat-bubble bot-bubble">
+            {message}
+            </div>
+            """, unsafe_allow_html=True)
+        with col2:
+            if st.button("🔊", key=f"tts_{uuid.uuid4()}"):
+                audio_file = text_to_speech(message)
+                if audio_file:
+                    st.audio(str(audio_file))
+    elif role == "user":
+        st.markdown(f"""
+        <div class="chat-bubble user-bubble">
+        {message}
+        </div>
+        """, unsafe_allow_html=True)
+    elif role == "debug":
+        st.markdown(f"""
+        <div class="chat-bubble debug-bubble">
+        {message}
+        </div>
+        """, unsafe_allow_html=True)
 
 def query_knowledge_base(query, vectorstore):
     debug_print(f"Entering query_knowledge_base() with query: {query}")
@@ -876,24 +936,7 @@ def main():
     chat_container = st.container()
     with chat_container:
         for role, message in st.session_state.chat_history:
-            if role == "bot":
-                st.markdown(f"""
-                <div class="chat-bubble bot-bubble">
-                {message}
-                </div>
-                """, unsafe_allow_html=True)
-            elif role == "user":
-                st.markdown(f"""
-                <div class="chat-bubble user-bubble">
-                {message}
-                </div>
-                """, unsafe_allow_html=True)
-            elif role == "debug":
-                st.markdown(f"""
-                <div class="chat-bubble debug-bubble">
-                {message}
-                </div>
-                """, unsafe_allow_html=True)
+            display_chat_bubble(role, message)
         
         # Add some space after the chat bubbles
         st.markdown("<div style='margin-bottom: 100px;'></div>", unsafe_allow_html=True)
