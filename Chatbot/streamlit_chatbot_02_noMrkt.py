@@ -124,18 +124,22 @@ def display_chat_bubble(role, message):
                     }
 
         with col2:
-            if 'current_audio' in st.session_state and st.session_state['current_audio']['hash'] == message_hash:
-                st.audio(st.session_state['current_audio']['audio'], format="audio/mp3")
+            if 'current_audio' in st.session_state and isinstance(st.session_state['current_audio'], dict):
+                current_audio = st.session_state['current_audio']
+                if current_audio.get('hash') == message_hash and 'audio' in current_audio:
+                    st.audio(current_audio['audio'], format="audio/mp3")
         
         with col3:
-            if 'current_audio' in st.session_state and st.session_state['current_audio']['hash'] == message_hash:
-                st.download_button(
-                    label="Download",
-                    data=st.session_state['current_audio']['audio'],
-                    file_name="speech.mp3",
-                    mime="audio/mp3",
-                    key=f"download_button_{message_hash}"
-                )
+            if 'current_audio' in st.session_state and isinstance(st.session_state['current_audio'], dict):
+                current_audio = st.session_state['current_audio']
+                if current_audio.get('hash') == message_hash and 'audio' in current_audio:
+                    st.download_button(
+                        label="Download",
+                        data=current_audio['audio'],
+                        file_name="speech.mp3",
+                        mime="audio/mp3",
+                        key=f"download_button_{message_hash}"
+                    )
     elif role == "user":
         st.markdown(f"""
         <div class="chat-bubble user-bubble">
