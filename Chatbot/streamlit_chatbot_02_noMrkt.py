@@ -879,11 +879,11 @@ def main():
                 margin-bottom: 0;
             }
             .stAudio > div {
-                height: 40px;
+                height: 20px;
                 max-width: 150px;
             }
             .stAudio > div > div {
-                height: 40px;
+                height: 20px;
             }
             .stAudio > div > div > div > div > div {
                 max-width: 150px;  /* Adjust this value as needed */
