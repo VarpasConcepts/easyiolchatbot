@@ -104,26 +104,27 @@ def text_to_speech(text, voice_type="alloy"):
 
 def display_chat_bubble(role, message):
     if role == "bot":
-        col1, col2 = st.columns([0.9, 0.1])
+        st.markdown(f"""
+        <div class="chat-bubble bot-bubble">
+        {message}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns([0.1, 0.2, 0.7])
         with col1:
-            st.markdown(f"""
-            <div class="chat-bubble bot-bubble">
-            {message}
-            </div>
-            """, unsafe_allow_html=True)
-        with col2:
             if st.button("🔊", key=f"tts_{hash(message)}"):
                 speech_file_path = text_to_speech(message)
                 if speech_file_path and os.path.exists(speech_file_path):
                     with open(speech_file_path, "rb") as audio_file:
                         audio_bytes = audio_file.read()
                     st.audio(audio_bytes, format="audio/mp3")
-                    st.download_button(
-                        label="Download Speech",
-                        data=audio_bytes,
-                        file_name="speech.mp3",
-                        mime="audio/mp3"
-                    )
+                    with col2:
+                        st.download_button(
+                            label="Download Speech",
+                            data=audio_bytes,
+                            file_name="speech.mp3",
+                            mime="audio/mp3"
+                        )
     elif role == "user":
         st.markdown(f"""
         <div class="chat-bubble user-bubble">
@@ -745,6 +746,16 @@ def main():
                 word-break: break-word;
                 margin-bottom: 0px;
                 font-size: 20;
+            }
+            /* New styles for TTS buttons */
+            .stAudio {
+                 margin-top: 0.5rem;
+            }
+            .stButton > button {
+                margin-top: 0.5rem;
+            }
+            .stDownloadButton > button {
+                margin-top: 0.5rem;
             }
 
             /* Chat bubble styling */
