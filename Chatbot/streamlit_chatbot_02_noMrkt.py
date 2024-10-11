@@ -104,27 +104,35 @@ def text_to_speech(text, voice_type="alloy"):
 
 def display_chat_bubble(role, message):
     if role == "bot":
-        st.markdown(f"""
-        <div class="chat-bubble bot-bubble">
-        {message}
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col1, col2, col3 = st.columns([0.1, 0.2, 0.7])
+        col1, col2 = st.columns([0.1, 0.9])
         with col1:
-            if st.button("🔊", key=f"tts_{hash(message)}"):
-                speech_file_path = text_to_speech(message)
-                if speech_file_path and os.path.exists(speech_file_path):
-                    with open(speech_file_path, "rb") as audio_file:
-                        audio_bytes = audio_file.read()
-                    st.audio(audio_bytes, format="audio/mp3")
-                    with col2:
-                        st.download_button(
-                            label="Download Speech",
-                            data=audio_bytes,
-                            file_name="speech.mp3",
-                            mime="audio/mp3"
-                        )
+            sound_button = st.button("🔊", key=f"sound_{hash(message)}")
+        with col2:
+            st.markdown(f"""
+            <div class="chat-bubble bot-bubble">
+            {message}
+            </div>
+            """, unsafe_allow_html=True)
+        
+        col3, col4, col5 = st.columns([0.2, 0.2, 0.6])
+        with col3:
+            play_pause_button = st.empty()
+        with col4:
+            download_button = st.empty()
+        
+        if sound_button:
+            speech_file_path = text_to_speech(message)
+            if speech_file_path and os.path.exists(speech_file_path):
+                with open(speech_file_path, "rb") as audio_file:
+                    audio_bytes = audio_file.read()
+                audio_player = st.audio(audio_bytes, format="audio/mp3")
+                play_pause_button.button("Play/Pause", key=f"play_{hash(message)}", on_click=lambda: audio_player.play() if audio_player.paused else audio_player.pause())
+                download_button.download_button(
+                    label="DOWNLOAD",
+                    data=audio_bytes,
+                    file_name="speech.mp3",
+                    mime="audio/mp3"
+                )
     elif role == "user":
         st.markdown(f"""
         <div class="chat-bubble user-bubble">
@@ -742,20 +750,11 @@ def main():
                 color: #000000 !important;
                 border: 1px solid #cccccc !important;
             }
+
             .st-emotion-cache-16idsys p {
                 word-break: break-word;
                 margin-bottom: 0px;
                 font-size: 20;
-            }
-            /* New styles for TTS buttons */
-            .stAudio {
-                 margin-top: 0.5rem;
-            }
-            .stButton > button {
-                margin-top: 0.5rem;
-            }
-            .stDownloadButton > button {
-                margin-top: 0.5rem;
             }
 
             /* Chat bubble styling */
@@ -791,7 +790,7 @@ def main():
                 margin-bottom: 20px;
             }
 
-            /* Button styling */
+            /* Updated Button styling */
             .stButton > button {
                 color: white !important;
                 border: none !important;
@@ -802,7 +801,9 @@ def main():
                 font-size: 16px !important;
                 margin: 4px 2px !important;
                 cursor: pointer !important;
-                border-radius: 5px !important;
+                border-radius: 20px !important;
+                width: 100%;
+                font-weight: bold;
             }
 
             /* "Yes, tell me more about IOLs" button (Green) */
@@ -823,8 +824,8 @@ def main():
 
             /* Ensure the Send button retains its original style */
             div.row-widget.stButton button:not(.st-emotion-cache-k008qs) {
-                background-color: #007bff !important; /* Default Send button color (change as needed) */
-                color: white !important; /* White text for Send button */
+                background-color: #007bff !important; /* Default Send button color */
+                color: white !important;
             }
 
             /* Hover effects */
@@ -844,7 +845,7 @@ def main():
                 font-size: 1rem;
                 margin-bottom: 0.5rem;
             }
-                
+
             /* Cross button styling */
             .st-emotion-cache-ztfqz8 {
                 display: inline-flex;
@@ -865,6 +866,36 @@ def main():
                 line-height: 1;
                 min-width: 2rem;
                 min-height: 2rem;
+            }
+
+            /* New styles for TTS buttons */
+            .stAudio {
+                margin-top: 0.5rem;
+            }
+
+            /* Style for sound icon button */
+            [data-testid="stHorizontalBlock"] > [data-testid="column"]:first-child .stButton > button {
+                background-color: #0066FF !important;
+                color: white !important;
+                width: auto;
+                padding: 5px 10px !important;
+            }
+
+            /* Style for Play/Pause button */
+            [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(3) .stButton > button {
+                background-color: white !important;
+                color: black !important;
+                border: 2px solid black !important;
+            }
+
+            /* Style for Download button */
+            [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(4) .stDownloadButton > button {
+                background-color: white !important;
+                color: black !important;
+                border: 2px solid black !important;
+                border-radius: 20px !important;
+                font-weight: bold;
+                width: 100%;
             }
         </style>
     """, unsafe_allow_html=True)
