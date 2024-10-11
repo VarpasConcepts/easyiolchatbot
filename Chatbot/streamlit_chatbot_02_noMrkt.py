@@ -104,6 +104,7 @@ def text_to_speech(text, voice_type="alloy"):
 
 def display_chat_bubble(role, message):
     if role == "bot":
+        message_hash = hash(message)
         st.markdown(f"""
         <div class="chat-bubble bot-bubble">
         {message}
@@ -112,22 +113,23 @@ def display_chat_bubble(role, message):
         
         col1, col2, col3, col4 = st.columns([0.1, 0.5, 0.2, 0.2])
         with col1:
-            if st.button("🔊", key=f"tts_{hash(message)}"):
+            if st.button("🔊", key=f"tts_button_{message_hash}"):
                 speech_file_path = text_to_speech(message)
                 if speech_file_path and os.path.exists(speech_file_path):
                     with open(speech_file_path, "rb") as audio_file:
                         audio_bytes = audio_file.read()
-                    st.session_state[f"audio_{hash(message)}"] = audio_bytes
+                    st.session_state[f"audio_{message_hash}"] = audio_bytes
         with col2:
-            if f"audio_{hash(message)}" in st.session_state:
-                st.audio(st.session_state[f"audio_{hash(message)}"], format="audio/mp3")
+            if f"audio_{message_hash}" in st.session_state:
+                st.audio(st.session_state[f"audio_{message_hash}"], format="audio/mp3", key=f"audio_player_{message_hash}")
         with col3:
-            if f"audio_{hash(message)}" in st.session_state:
+            if f"audio_{message_hash}" in st.session_state:
                 st.download_button(
                     label="Download Speech",
-                    data=st.session_state[f"audio_{hash(message)}"],
+                    data=st.session_state[f"audio_{message_hash}"],
                     file_name="speech.mp3",
-                    mime="audio/mp3"
+                    mime="audio/mp3",
+                    key=f"download_button_{message_hash}"
                 )
     elif role == "user":
         st.markdown(f"""
@@ -135,7 +137,7 @@ def display_chat_bubble(role, message):
         {message}
         </div>
         """, unsafe_allow_html=True)
-
+        
 def query_knowledge_base(query, vectorstore):
     debug_print(f"Entering query_knowledge_base() with query: {query}")
     if vectorstore is None:
