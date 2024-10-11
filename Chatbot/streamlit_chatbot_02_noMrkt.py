@@ -111,22 +111,27 @@ def display_chat_bubble(role, message):
         </div>
         """, unsafe_allow_html=True)
         
-        col1, col2, col3, col4 = st.columns([0.1, 0.5, 0.2, 0.2])
+        col1, col2, col3 = st.columns([0.1, 0.7, 0.2])
         with col1:
             if st.button("🔊", key=f"tts_button_{message_hash}"):
                 speech_file_path = text_to_speech(message)
                 if speech_file_path and os.path.exists(speech_file_path):
                     with open(speech_file_path, "rb") as audio_file:
                         audio_bytes = audio_file.read()
-                    st.session_state[f"audio_{message_hash}"] = audio_bytes
+                    st.session_state['current_audio'] = {
+                        'hash': message_hash,
+                        'audio': audio_bytes
+                    }
+
         with col2:
-            if f"audio_{message_hash}" in st.session_state:
-                st.audio(st.session_state[f"audio_{message_hash}"], format="audio/mp3", key=f"audio_player_{message_hash}")
+            if 'current_audio' in st.session_state and st.session_state['current_audio']['hash'] == message_hash:
+                st.audio(st.session_state['current_audio']['audio'], format="audio/mp3")
+        
         with col3:
-            if f"audio_{message_hash}" in st.session_state:
+            if 'current_audio' in st.session_state and st.session_state['current_audio']['hash'] == message_hash:
                 st.download_button(
-                    label="Download Speech",
-                    data=st.session_state[f"audio_{message_hash}"],
+                    label="Download",
+                    data=st.session_state['current_audio']['audio'],
                     file_name="speech.mp3",
                     mime="audio/mp3",
                     key=f"download_button_{message_hash}"
@@ -137,7 +142,7 @@ def display_chat_bubble(role, message):
         {message}
         </div>
         """, unsafe_allow_html=True)
-        
+
 def query_knowledge_base(query, vectorstore):
     debug_print(f"Entering query_knowledge_base() with query: {query}")
     if vectorstore is None:
@@ -935,6 +940,8 @@ def main():
         st.session_state.question_count = 0
     if 'input_key' not in st.session_state:
         st.session_state.input_key = 0
+    if 'current_audio' not in st.session_state:
+        st.session_state.current_audio = None
 
     debug_print("Initializing vectorstore")
     vectorstore = load_vectorstore()
