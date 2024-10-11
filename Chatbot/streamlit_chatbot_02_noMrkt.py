@@ -110,28 +110,31 @@ def display_chat_bubble(role, message):
         </div>
         """, unsafe_allow_html=True)
         
-        col1, col2, col3 = st.columns([0.1, 0.2, 0.7])
+        col1, col2, col3, col4 = st.columns([0.1, 0.5, 0.2, 0.2])
         with col1:
             if st.button("🔊", key=f"tts_{hash(message)}"):
                 speech_file_path = text_to_speech(message)
                 if speech_file_path and os.path.exists(speech_file_path):
                     with open(speech_file_path, "rb") as audio_file:
                         audio_bytes = audio_file.read()
-                    st.audio(audio_bytes, format="audio/mp3")
-                    with col2:
-                        st.download_button(
-                            label="Download Speech",
-                            data=audio_bytes,
-                            file_name="speech.mp3",
-                            mime="audio/mp3"
-                        )
+                    st.session_state[f"audio_{hash(message)}"] = audio_bytes
+        with col2:
+            if f"audio_{hash(message)}" in st.session_state:
+                st.audio(st.session_state[f"audio_{hash(message)}"], format="audio/mp3")
+        with col3:
+            if f"audio_{hash(message)}" in st.session_state:
+                st.download_button(
+                    label="Download Speech",
+                    data=st.session_state[f"audio_{hash(message)}"],
+                    file_name="speech.mp3",
+                    mime="audio/mp3"
+                )
     elif role == "user":
         st.markdown(f"""
         <div class="chat-bubble user-bubble">
         {message}
         </div>
         """, unsafe_allow_html=True)
-
 
 def query_knowledge_base(query, vectorstore):
     debug_print(f"Entering query_knowledge_base() with query: {query}")
@@ -743,20 +746,11 @@ def main():
                 color: #000000 !important;
                 border: 1px solid #cccccc !important;
             }
+
             .st-emotion-cache-16idsys p {
                 word-break: break-word;
                 margin-bottom: 0px;
-                font-size: 20;
-            }
-            /* New styles for TTS buttons */
-            .stAudio {
-                 margin-top: 0.5rem;
-            }
-            .stButton > button {
-                margin-top: 0.5rem;
-            }
-            .stDownloadButton > button {
-                margin-top: 0.5rem;
+                font-size: 20px;
             }
 
             /* Chat bubble styling */
@@ -824,7 +818,7 @@ def main():
 
             /* Ensure the Send button retains its original style */
             div.row-widget.stButton button:not(.st-emotion-cache-k008qs) {
-                background-color: #007bff !important; /* Default Send button color (change as needed) */
+                background-color: #007bff !important; /* Default Send button color */
                 color: white !important; /* White text for Send button */
             }
 
@@ -866,6 +860,44 @@ def main():
                 line-height: 1;
                 min-width: 2rem;
                 min-height: 2rem;
+            }
+
+            /* Updated styles for TTS buttons and audio player */
+            .stAudio {
+                margin-top: 0;
+                margin-bottom: 0;
+            }
+            .stAudio > div {
+                height: 40px;
+            }
+            .stAudio > div > div {
+                height: 40px;
+            }
+            .stButton > button {
+                margin-top: 0;
+                height: 40px;
+                padding: 0 10px !important;
+            }
+            .stDownloadButton > button {
+                margin-top: 0;
+                height: 40px;
+                white-space: nowrap;
+            }
+            /* Align columns */
+            [data-testid="column"] {
+                display: flex;
+                align-items: center;
+            }
+            /* Style for sound icon button */
+            [data-testid="stHorizontalBlock"] > [data-testid="column"]:first-child .stButton > button {
+                background-color: #0066FF !important;
+                color: white !important;
+            }
+            /* Style for Download button */
+            [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(4) .stDownloadButton > button {
+                background-color: white !important;
+                color: black !important;
+                border: 2px solid black !important;
             }
         </style>
     """, unsafe_allow_html=True)
