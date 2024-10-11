@@ -907,7 +907,7 @@ def main():
 
             /* Precise targeting for the audio player */
             .stAudio > div:first-child {
-                max-width: 1500px !important;  /* Adjust this value as needed */
+                max-width: 150px !important;  /* Adjust this value as needed */
                 margin-left: 0 !important;
             }
             .stAudio > div:first-child > div:first-child > div:first-child {
