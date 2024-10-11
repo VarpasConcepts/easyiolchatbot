@@ -114,8 +114,14 @@ def display_chat_bubble(role, message):
         col1, col2, col3 = st.columns([0.1, 0.7, 0.2])
         with col1:
             if st.button("🔊", key=f"tts_button_{message_hash}"):
-                # Your existing TTS code here
-                pass
+                speech_file_path = text_to_speech(message)
+                if speech_file_path and os.path.exists(speech_file_path):
+                    with open(speech_file_path, "rb") as audio_file:
+                        audio_bytes = audio_file.read()
+                    st.session_state['current_audio'] = {
+                        'hash': message_hash,
+                        'audio': audio_bytes
+                    }
 
         with col2:
             if 'current_audio' in st.session_state and isinstance(st.session_state['current_audio'], dict):
@@ -874,9 +880,13 @@ def main():
             }
             .stAudio > div {
                 height: 40px;
+                max-width: 150px;
             }
             .stAudio > div > div {
                 height: 40px;
+            }
+            .stAudio > div > div > div > div > div {
+                max-width: 150px;  /* Adjust this value as needed */
             }
             .stButton > button {
                 margin-top: 0;
@@ -899,36 +909,10 @@ def main():
                 color: white !important;
             }
             /* Style for Download button */
-            [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(3) .stDownloadButton > button {
+            [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(4) .stDownloadButton > button {
                 background-color: white !important;
                 color: black !important;
                 border: 2px solid black !important;
-            }
-
-            /* Precise targeting for the audio player */
-            .stAudio > div:first-child {
-                max-width: 150px !important;  /* Adjust this value as needed */
-                margin-left: 0 !important;
-            }
-            .stAudio > div:first-child > div:first-child > div:first-child {
-                max-width: 150px !important;  /* Adjust this value as needed */
-            }
-            .stAudio > div:first-child > div:first-child > div:first-child > div:first-child {
-                max-width: 150px !important;  /* Adjust this value as needed */
-            }
-            /* Style for the actual audio slider */
-            .stAudio > div:first-child > div:first-child > div:first-child > div:first-child > div:first-child {
-                max-width: 150px !important;  /* Adjust this value as needed */
-            }
-
-            /* Adjust layout for TTS button, audio player, and download button */
-            [data-testid="column"]:has(.stAudio) {
-                min-width: 150px !important;  /* Adjust this value to match the audio player width */
-                max-width: 150px !important;
-            }
-            [data-testid="column"]:has(.stDownloadButton) {
-                width: auto !important;
-                flex: 0 0 auto !important;
             }
         </style>
     """, unsafe_allow_html=True)
