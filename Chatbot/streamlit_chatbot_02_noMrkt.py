@@ -108,23 +108,27 @@ def text_to_speech(text, voice_type="alloy"):
         st.error("No audio files were generated")
         return None
 
-    st.write("Combining audio files")
-    combined = AudioSegment.empty()
-    for audio in audio_files:
-        combined += audio
+    try:
+        st.write("Combining audio files")
+        combined = AudioSegment.empty()
+        for audio in audio_files:
+            combined += audio
 
-    unique_filename = f"combined_speech_{uuid.uuid4()}.mp3"
-    combined_file_path = Path(unique_filename)
-    combined.export(combined_file_path, format="mp3")
-    
-    st.write(f"Combined audio saved to {combined_file_path}")
-    
-    if combined_file_path.exists():
-        st.write(f"Audio file exists and its size is {combined_file_path.stat().st_size} bytes")
-    else:
-        st.error("Combined audio file does not exist")
-    
-    return combined_file_path
+        unique_filename = f"combined_speech_{uuid.uuid4()}.mp3"
+        combined_file_path = Path(unique_filename)
+        combined.export(combined_file_path, format="mp3")
+        
+        st.write(f"Combined audio saved to {combined_file_path}")
+        
+        if combined_file_path.exists():
+            st.write(f"Audio file exists and its size is {combined_file_path.stat().st_size} bytes")
+            return str(combined_file_path)
+        else:
+            st.error("Combined audio file does not exist")
+            return None
+    except Exception as e:
+        st.error(f"Error in combining audio files: {str(e)}")
+        return None
 
 def display_chat_bubble(role, message):
     if role == "bot":
@@ -138,18 +142,22 @@ def display_chat_bubble(role, message):
         with col2:
             if st.button("🔊", key=f"tts_{uuid.uuid4()}"):
                 st.write("TTS button clicked")
-                audio_file = text_to_speech(message)
-            if audio_file:
-                st.write(f"Audio file generated: {audio_file}")
                 try:
-                    with open(audio_file, "rb") as f:
-                        audio_bytes = f.read()
-                        st.audio(audio_bytes, format="audio/mp3")
-                        st.write("Audio playback attempted")
+                    audio_file = text_to_speech(message)
+                    st.write(f"text_to_speech returned: {audio_file}")
+                    if audio_file and isinstance(audio_file, (str, Path)):
+                        st.write(f"Audio file generated: {audio_file}")
+                        try:
+                            with open(audio_file, "rb") as f:
+                                audio_bytes = f.read()
+                            st.audio(audio_bytes, format="audio/mp3")
+                            st.write("Audio playback attempted")
+                        except Exception as e:
+                            st.error(f"Error playing audio: {str(e)}")
+                    else:
+                        st.error(f"Invalid audio file returned: {type(audio_file)}")
                 except Exception as e:
-                    st.error(f"Error playing audio: {str(e)}")
-            else:
-                st.error("Failed to generate audio file")
+                    st.error(f"Error in TTS process: {str(e)}")
     elif role == "user":
         st.markdown(f"""
         <div class="chat-bubble user-bubble">
