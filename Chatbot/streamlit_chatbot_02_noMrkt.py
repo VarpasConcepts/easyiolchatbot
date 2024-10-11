@@ -89,6 +89,8 @@ def text_to_speech(text, voice_type="alloy"):
     chunks = [text[i:i + max_length] for i in range(0, len(text), max_length)]
     audio_files = []
 
+    st.write(f"Generating TTS for {len(chunks)} chunks")  # Debug log
+
     for i, chunk in enumerate(chunks):
         try:
             response = client.audio.speech.create(model="tts-1",
@@ -96,6 +98,7 @@ def text_to_speech(text, voice_type="alloy"):
                                                   input=chunk)
             speech_file_path = Path(f"chunk_{i}.mp3")
             response.stream_to_file(speech_file_path)
+            st.write(f"Chunk {i} saved to {speech_file_path}")  # Debug log
             audio_files.append(AudioSegment.from_mp3(speech_file_path))
         except Exception as e:
             st.error(f"Error in text-to-speech conversion for chunk {i}: {e}")
@@ -110,9 +113,12 @@ def text_to_speech(text, voice_type="alloy"):
     unique_filename = f"combined_speech_{uuid.uuid4()}.mp3"
     combined_file_path = Path(unique_filename)
     combined.export(combined_file_path, format="mp3")
+    
+    st.write(f"Combined audio saved to {combined_file_path}")  # Debug log
+    
     return combined_file_path
 
-# Modify the chat bubble display function to include TTS button
+
 def display_chat_bubble(role, message):
     if role == "bot":
         col1, col2 = st.columns([0.9, 0.1])
@@ -124,9 +130,17 @@ def display_chat_bubble(role, message):
             """, unsafe_allow_html=True)
         with col2:
             if st.button("🔊", key=f"tts_{uuid.uuid4()}"):
+                st.write("TTS button clicked")  # Debug log
                 audio_file = text_to_speech(message)
                 if audio_file:
-                    st.audio(str(audio_file))
+                    st.write(f"Audio file generated: {audio_file}")  # Debug log
+                    try:
+                        st.audio(str(audio_file))
+                        st.write("Audio playback attempted")  # Debug log
+                    except Exception as e:
+                        st.error(f"Error playing audio: {e}")
+                else:
+                    st.error("Failed to generate audio file")
     elif role == "user":
         st.markdown(f"""
         <div class="chat-bubble user-bubble">
