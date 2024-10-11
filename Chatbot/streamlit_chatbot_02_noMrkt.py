@@ -18,6 +18,7 @@ import re
 from pathlib import Path
 from pydub import AudioSegment
 import uuid
+import tempfile
 
 # Add a debug flag
 DEBUG = False
@@ -86,48 +87,22 @@ def process_response(response, doctor_name):
 # Add this function for text-to-speech conversion
 def text_to_speech(text, voice_type="alloy"):
     st.write("Starting text-to-speech conversion")
-    max_length = 4096
-    chunks = [text[i:i + max_length] for i in range(0, len(text), max_length)]
-    audio_files = []
-
-    for i, chunk in enumerate(chunks):
-        try:
-            st.write(f"Processing chunk {i+1} of {len(chunks)}")
-            response = client.audio.speech.create(model="tts-1",
-                                                  voice=voice_type,
-                                                  input=chunk)
-            speech_file_path = Path(f"chunk_{i}.mp3")
-            response.stream_to_file(speech_file_path)
-            st.write(f"Chunk {i+1} saved to {speech_file_path}")
-            audio_files.append(AudioSegment.from_mp3(speech_file_path))
-        except Exception as e:
-            st.error(f"Error in text-to-speech conversion for chunk {i+1}: {str(e)}")
-            return None
-
-    if not audio_files:
-        st.error("No audio files were generated")
-        return None
-
     try:
-        st.write("Combining audio files")
-        combined = AudioSegment.empty()
-        for audio in audio_files:
-            combined += audio
-
-        unique_filename = f"combined_speech_{uuid.uuid4()}.mp3"
-        combined_file_path = Path(unique_filename)
-        combined.export(combined_file_path, format="mp3")
+        response = client.audio.speech.create(
+            model="tts-1",
+            voice=voice_type,
+            input=text
+        )
         
-        st.write(f"Combined audio saved to {combined_file_path}")
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
+            tmp_file.write(response.content)
+            audio_file_path = tmp_file.name
         
-        if combined_file_path.exists():
-            st.write(f"Audio file exists and its size is {combined_file_path.stat().st_size} bytes")
-            return str(combined_file_path)
-        else:
-            st.error("Combined audio file does not exist")
-            return None
+        st.write(f"Audio file saved to {audio_file_path}")
+        return audio_file_path
     except Exception as e:
-        st.error(f"Error in combining audio files: {str(e)}")
+        st.error(f"Error in text-to-speech conversion: {str(e)}")
         return None
 
 def display_chat_bubble(role, message):
@@ -140,24 +115,26 @@ def display_chat_bubble(role, message):
             </div>
             """, unsafe_allow_html=True)
         with col2:
-            if st.button("🔊", key=f"tts_{uuid.uuid4()}"):
+            if st.button("🔊", key=f"tts_{hash(message)}"):
                 st.write("TTS button clicked")
-                try:
-                    audio_file = text_to_speech(message)
-                    st.write(f"text_to_speech returned: {audio_file}")
-                    if audio_file and isinstance(audio_file, (str, Path)):
-                        st.write(f"Audio file generated: {audio_file}")
-                        try:
-                            with open(audio_file, "rb") as f:
-                                audio_bytes = f.read()
-                            st.audio(audio_bytes, format="audio/mp3")
-                            st.write("Audio playback attempted")
-                        except Exception as e:
-                            st.error(f"Error playing audio: {str(e)}")
-                    else:
-                        st.error(f"Invalid audio file returned: {type(audio_file)}")
-                except Exception as e:
-                    st.error(f"Error in TTS process: {str(e)}")
+                speech_file_path = text_to_speech(message)
+                if speech_file_path and os.path.exists(speech_file_path):
+                    st.write(f"Audio file generated: {speech_file_path}")
+                    try:
+                        with open(speech_file_path, "rb") as audio_file:
+                            audio_bytes = audio_file.read()
+                        st.audio(audio_bytes, format="audio/mp3")
+                        st.download_button(
+                            label="Download Speech",
+                            data=audio_bytes,
+                            file_name="speech.mp3",
+                            mime="audio/mp3"
+                        )
+                        st.write("Audio playback and download button added")
+                    except Exception as e:
+                        st.error(f"Error playing audio: {str(e)}")
+                else:
+                    st.error("Failed to generate audio file")
     elif role == "user":
         st.markdown(f"""
         <div class="chat-bubble user-bubble">
