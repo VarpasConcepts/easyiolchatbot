@@ -111,7 +111,7 @@ def display_chat_bubble(role, message):
         </div>
         """, unsafe_allow_html=True)
         
-        col1, col2, col3 = st.columns([0.1, 0.4, 0.2])
+        col1, col2, col3 = st.columns([0.1, 0.2, 0.2])
         with col1:
             if st.button("🔊", key=f"tts_button_{message_hash}"):
                 speech_file_path = text_to_speech(message)
