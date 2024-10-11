@@ -801,7 +801,7 @@ def main():
             .stButton > button {
                 color: white !important;
                 border: none !important;
-                height: 70px;
+                height: 170px;
                 padding: 10px 24px !important;
                 text-align: center !important;
                 text-decoration: none !important;
