@@ -51,7 +51,7 @@ def load_vectorstore():
 
 def generate_audio(text):
     sound_file = BytesIO()
-    tts = gTTS(text, lang='en')
+    tts = gTTS(text, lang='en', tld = "us")
     tts.write_to_fp(sound_file)
     sound_file.seek(0)
     return sound_file
