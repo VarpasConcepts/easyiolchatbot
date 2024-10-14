@@ -54,13 +54,13 @@ def load_vectorstore():
     
     
 def format_and_replace(text, doctor_name):
-    # Replace doctor-related words with the actual doctor's name
+    # Replace doctor-related words with the actual doctor's name + office
     doctor_words = ['doctor', 'surgeon', 'ophthalmologist']
     for word in doctor_words:
         # Remove "your" (case-insensitive) before the doctor's name
-        text = re.sub(r'\b(?i:your\s+)?' + word + r'\b', doctor_name, text, flags=re.IGNORECASE)
+        text = re.sub(r'\b(?i:your\s+)?' + word + r'\b', f"{doctor_name}'s office", text, flags=re.IGNORECASE)
     # Remove any remaining "your" before the doctor's name
-    text = re.sub(r'\b(?i:your)\s+' + re.escape(doctor_name), doctor_name, text)
+    text = re.sub(r'\b(?i:your)\s+' + re.escape(f"{doctor_name}'s office"), f"{doctor_name}'s office", text)
     # Add line breaks for better readability
     text = text.replace(". ", ".\n")
     # Improve bullet point handling
