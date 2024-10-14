@@ -416,7 +416,7 @@ def process_query(query, vectorstore, user_lifestyle, prioritized_lenses):
         ])
         
         # Separate message for lens suggestions
-        lens_suggestions = "Based on your lifestyle and visual needs," + st.session_state.doctor_name + " has suggested the following lenses for you:\n\n"
+        lens_suggestions = "Based on your lifestyle and visual needs, " + st.session_state.doctor_name + " has suggested the following lenses for you:\n\n"
         for lens in prioritized_lenses:
             description = get_lens_description(lens, user_lifestyle)
             if description:
