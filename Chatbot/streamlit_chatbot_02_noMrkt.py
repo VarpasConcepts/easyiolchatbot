@@ -1022,12 +1022,12 @@ def main():
                 st.session_state.messages.append({"role": "user", "content": st.session_state.user_name})
                 st.session_state.chat_history.append(("user", st.session_state.user_name))
                 
-                bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs. You can ask me any questions you have regarding cataract surgery and intraocular lenses, all you have to do is type in your question in the chatbox. After I get to know you a little better, I will start generating questions that are relevant based on your conversation. If those questions get you curious, you can click on those questions to know more."
+                bot_response = f"It's so wonderful to meet you, {st.session_state.user_name}! Thank you for sharing your name with me. I'm really excited to help you explore IOLs and find the best option for your needs. Feel free to ask me anything about cataract surgery or intraocular lenses—just type your question in the chat! As we chat, I'll generate a few questions based on our conversation. If anything piques your curiosity, just click to learn more. I'm here to help every step of the way!"
                 bot_response = process_response(bot_response, st.session_state.doctor_name)
                 st.session_state.messages.append({"role": "assistant", "content": bot_response})
                 st.session_state.chat_history.append(("bot", bot_response))
                 
-                lifestyle_question = "Now, I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
+                lifestyle_question = "I'd love to get to know you better. Could you share a little bit about your lifestyle and your activities? This will help me understand your vision needs and how we can best support them. Feel free to tell me about your work, hobbies, or any visual tasks that are important to you!"
                 lifestyle_question = process_response(lifestyle_question, st.session_state.doctor_name)
                 st.session_state.messages.append({"role": "assistant", "content": lifestyle_question})
                 st.session_state.chat_history.append(("bot", lifestyle_question))
