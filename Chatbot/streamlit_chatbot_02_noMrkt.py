@@ -1022,7 +1022,8 @@ def main():
                 st.session_state.messages.append({"role": "user", "content": st.session_state.user_name})
                 st.session_state.chat_history.append(("user", st.session_state.user_name))
                 
-                bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs."
+                bot_response = f"It's wonderful to meet you, {st.session_state.user_name}! Thank you so much for sharing your name with me. I'm excited to help you learn more about IOLs and find the best option for your unique needs. 
+                You can ask me any questions you have regarding cataract surgery and intraocular lenses, all you have to do is type in your question in the chatbox. After I get to know you a little better, I will start generating questions that are relevant based on your conversation. If those questions get you curious, you can click on those questions to know more."
                 bot_response = process_response(bot_response, st.session_state.doctor_name)
                 st.session_state.messages.append({"role": "assistant", "content": bot_response})
                 st.session_state.chat_history.append(("bot", bot_response))
